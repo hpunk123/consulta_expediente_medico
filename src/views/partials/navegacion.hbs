@@ -1,0 +1,44 @@
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon">
+        <img src="/img/logo_cdmx_2026.png" alt="CDMX" style="width:100%;height:100%;object-fit:contain;">
+      </div>
+      <div class="nav-brand-text">
+        <span>Expediente Médico</span>
+        <small>CECC SSC CDMX</small>
+      </div>
+    </a>
+
+    {{#if user}}
+    <div class="nav-menu">
+      <a href="/consulta" class="nav-link">
+        <i class="fas fa-search"></i> Buscar
+      </a>
+
+      {{#if (eq user.rol_nombre 'administrador')}}
+      <a href="/admin/usuarios" class="nav-link">
+        <i class="fas fa-users-cog"></i> Usuarios
+      </a>
+      {{/if}}
+
+      <div class="nav-user">
+        <span class="nav-user-name">
+          <i class="fas fa-user-circle"></i> {{user.nombre}}
+          <span class="nav-user-role">{{user.rol_nombre}}</span>
+        </span>
+        <button class="theme-switch" id="themeSwitch" aria-label="Cambiar tema">
+          <div class="theme-switch-track">
+            <i class="fas fa-sun theme-switch-icon" id="themeIconLight"></i>
+            <i class="fas fa-moon theme-switch-icon" id="themeIconDark"></i>
+            <div class="theme-switch-thumb"></div>
+          </div>
+        </button>
+        <a href="/logout" class="nav-link nav-logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+</nav>

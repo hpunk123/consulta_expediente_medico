@@ -1,0 +1,86 @@
+<div style="max-width:900px;margin:0 auto;">
+  <div class="admin-header">
+    <h2><i class="fas fa-users-cog"></i> Gestión de Usuarios</h2>
+    <button class="btn btn-primary" onclick="document.getElementById('newUserModal').style.display='flex'">
+      <i class="fas fa-plus"></i> Nuevo Usuario
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      {{#if usuarios.length}}
+        {{#each usuarios}}
+        <div class="user-card">
+          <div class="user-avatar">{{this.nombre.[0]}}</div>
+          <div class="user-info">
+            <div class="user-name">{{this.nombre}}</div>
+            <div class="user-username">@{{this.username}} {{#if this.clave}}| Clave: {{this.clave}}{{/if}}</div>
+          </div>
+          <span class="user-role role-{{this.rol_nombre}}">{{this.rol_nombre}}</span>
+          {{#if this.activo}}
+          <form action="/admin/usuarios/{{this.id_usuario}}/eliminar" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar este usuario?')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </form>
+          {{else}}
+          <span style="color:var(--text-muted);font-size:var(--text-xs);margin-right:var(--sp-2);">Inactivo</span>
+          <form action="/admin/usuarios/{{this.id_usuario}}/reactivar" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="fas fa-undo"></i>
+            </button>
+          </form>
+          {{/if}}
+        </div>
+        {{/each}}
+      {{else}}
+        <p class="text-muted">No hay usuarios registrados</p>
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="newUserModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3><i class="fas fa-user-plus"></i> Nuevo Usuario</h3>
+      <button type="button" class="modal-close" onclick="document.getElementById('newUserModal').style.display='none'">&times;</button>
+    </div>
+    <form action="/admin/usuarios" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nombre completo</label>
+          <input type="text" name="nombre" required>
+        </div>
+        <div class="form-group">
+          <label>Clave</label>
+          <input type="text" name="clave" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" name="password" required>
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select name="id_rol" required>
+            <option value="">Seleccionar rol</option>
+            {{#each roles}}
+            <option value="{{this.id_rol}}">{{this.descripcion}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('newUserModal').style.display='none'">Cancelar</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

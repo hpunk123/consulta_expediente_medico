@@ -1,0 +1,13 @@
+<div class="search-container">
+  <div class="search-card">
+    <h2><i class="fas fa-search"></i> Buscar Expediente</h2>
+    <p>Ingrese el nombre del evaluado para buscar su expediente médico</p>
+
+    <form action="/consulta/buscar" method="GET" class="search-form">
+      <input type="text" name="nombre" placeholder="Buscar por nombre, número de empleado o número de evaluación..." value="{{nombre}}" required>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-search"></i> Buscar
+      </button>
+    </form>
+  </div>
+</div>

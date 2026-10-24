@@ -1,0 +1,3501 @@
+<div style="max-width:1000px;margin:0 auto;">
+  <!-- Header -->
+  <div class="expediente-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--sp-4);">
+      <div>
+        <h1>Expediente Médico</h1>
+        <p>{{evaluado.nombre}} &middot; {{evaluado.anioEval}} &middot; {{evaluado.tipo_eval_desc}} &middot; ID vLife: {{id_eval}}</p>
+      </div>
+      <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+        <a href="/consulta/expediente/{{id_eval}}/pdf" class="btn btn-pdf btn-sm">
+          <i class="fas fa-file-pdf"></i> PDF
+        </a>
+        {{#unless finalizado}}
+        {{#if (or (eq user.rol_nombre 'administrador') (eq user.rol_nombre 'director') (eq user.rol_nombre 'subdirector') (eq user.rol_nombre 'jefe_departamento') (eq user.rol_nombre 'supervisor'))}}
+        <button type="button" class="btn btn-warning btn-sm" onclick="openFinalizarModal()">
+          <i class="fas fa-lock"></i> Finalizar
+        </button>
+        {{/if}}
+        {{else}}
+        {{#if (or (eq user.rol_nombre 'administrador') (eq user.rol_nombre 'director') (eq user.rol_nombre 'subdirector') (eq user.rol_nombre 'jefe_departamento'))}}
+        <form action="/consulta/expediente/{{id_eval}}/liberar" method="POST" style="display:inline;">
+          <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('¿Está seguro de liberar este expediente para edición?')">
+            <i class="fas fa-unlock"></i> Liberar
+          </button>
+        </form>
+        {{/if}}
+        {{/unless}}
+        <a href="/consulta" class="btn btn-ghost btn-sm" style="color:white;">
+          <i class="fas fa-arrow-left"></i> Volver
+        </a>
+      </div>
+    </div>
+    {{#if finalizado}}
+    <div style="margin-top:var(--sp-3);display:inline-flex;align-items:center;gap:var(--sp-2);font-size:var(--text-xs);background:rgba(16,185,129,0.2);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-full);color:#6ee7b7;">
+      <i class="fas fa-check-circle"></i> Finalizado: {{finalizado.fecha_finalizacion}} {{#if finalizado.usuario_finalizo}}por {{finalizado.usuario_finalizo}}{{/if}}
+    </div>
+    {{/if}}
+  </div>
+
+  <!-- Datos Generales -->
+  <div class="card" style="border-radius:0 0 var(--radius-lg) var(--radius-lg);margin-bottom:var(--sp-5);">
+    <div class="card-header">
+      <i class="fas fa-user" style="color:var(--blue-600);"></i>
+      <h2>Datos Generales</h2>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Número de evaluación</div>
+          {{#if enlaceSicoc.evalConsecutivo}}
+          <input type="text" class="form-input" value="{{enlaceSicoc.evalConsecutivo}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+          {{else}}
+          <input type="text" class="form-input" id="eval_consecutivo_display" value="" readonly style="background:var(--gray-100);cursor:not-allowed;" placeholder="No registrado">
+          {{/if}}
+        </div>
+        {{#if datosSicoc}}
+        <div class="info-item">
+          <div class="info-label">Nombre (SICOC)</div>
+          <input type="text" class="form-input" value="{{datosSicoc.empNombreCompleto}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+        </div>
+        <div class="info-item">
+          <div class="info-label">No. Empleado (SICOC)</div>
+          <input type="text" class="form-input" value="{{datosSicoc.evalNumEmpleado}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Subprograma</div>
+          <input type="text" class="form-input" value="{{datosSicoc.spgClave}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Adscripción</div>
+          <input type="text" class="form-input" value="{{datosSicoc.evalAdscripcion}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Cargo</div>
+          <input type="text" class="form-input" value="{{datosSicoc.cgCargo}}" readonly style="background:var(--gray-100);cursor:not-allowed;">
+        </div>
+        {{/if}}
+        <div class="info-item">
+          <div class="info-label">RFC</div>
+          <input type="text" class="form-input" id="dg_rfc" value="{{datosGenerales.rfc}}" placeholder="RFC">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Género</div>
+          <select class="form-input" id="dg_genero">
+            <option value="">Seleccionar</option>
+            <option value="HOMBRE" {{#if (eq datosGenerales.genero "HOMBRE")}}selected{{/if}}>Hombre</option>
+            <option value="MUJER" {{#if (eq datosGenerales.genero "MUJER")}}selected{{/if}}>Mujer</option>
+            <option value="OTRO" {{#if (eq datosGenerales.genero "OTRO")}}selected{{/if}}>Otro</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Edad</div>
+          <input type="number" class="form-input" id="dg_edad" value="{{datosGenerales.edad}}" placeholder="Edad" readonly>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Fecha de Nacimiento</div>
+          <input type="date" class="form-input" id="dg_fecha_nacimiento" value="{{datosGenerales.fecha_nacimiento}}" onchange="calcularEdad()">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Estado Civil</div>
+          <select class="form-input" id="dg_estado_civil">
+            <option value="">Seleccionar</option>
+            {{#if datosGenerales.estado_civil}}
+            <option value="{{datosGenerales.estado_civil}}" selected>{{datosGenerales.estado_civil}}</option>
+            {{/if}}
+            <option value="SOLTERO(A)">Soltero(a)</option>
+            <option value="CASADO(A)">Casado(a)</option>
+            <option value="DIVORCIADO(A)">Divorciado(a)</option>
+            <option value="VIUDO(A)">Viudo(a)</option>
+            <option value="UNION_LIBRE">Unión libre</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Escolaridad</div>
+          <select class="form-input" id="dg_escolaridad">
+            <option value="">Seleccionar</option>
+            {{#if datosGenerales.escolaridad}}
+            <option value="{{datosGenerales.escolaridad}}" selected>{{datosGenerales.escolaridad}}</option>
+            {{/if}}
+            <option value="PRIMARIA">Primaria</option>
+            <option value="SECUNDARIA">Secundaria</option>
+            <option value="PREPARATORIA">Preparatoria</option>
+            <option value="LICENCIATURA">Licenciatura</option>
+            <option value="MAESTRIA">Maestría</option>
+            <option value="DOCTORADO">Doctorado</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Teléfono</div>
+          <input type="tel" class="form-input" id="dg_telefono_celular" value="{{datosGenerales.telefono_celular}}" placeholder="Teléfono celular">
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:var(--sp-3);">
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveDatosGenerales()">
+          <i class="fas fa-save"></i> Guardar Datos Generales
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card" style="margin-bottom:var(--sp-5);">
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="antecedentes">
+        <i class="fas fa-notes-medical"></i> Antecedentes
+      </button>
+      <button class="tab-btn" data-tab="tatuajes">
+        <i class="fas fa-paint-brush"></i> Tatuajes
+      </button>
+      <button class="tab-btn" data-tab="documentacion">
+        <i class="fas fa-file-alt"></i> Documentación
+      </button>
+      <button class="tab-btn" data-tab="exploracion">
+        <i class="fas fa-stethoscope"></i> Exploración Física
+      </button>
+      <button class="tab-btn" data-tab="somatometria">
+        <i class="fas fa-heartbeat"></i> Somatometría y Signos Vitales
+      </button>
+    </div>
+
+    <!-- Tab: Antecedentes -->
+    <div class="tab-panel active" id="tab-antecedentes">
+      <h2 style="font-size:var(--text-xl);font-weight:700;color:var(--blue-700);margin-bottom:var(--sp-4);">Historia Clínica</h2>
+      <h3 class="section-title">Heredo Familiares</h3>
+      <div class="heredo-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Enfermedad</th>
+              <th>Padre</th>
+              <th>Madre</th>
+              <th>Abuelos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-danger">Hipertensión</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_hipertension_padre" {{#if antecedentes.heredo.enf_hipertension_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_hipertension_madre" {{#if antecedentes.heredo.enf_hipertension_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_hipertension_abuelos" {{#if antecedentes.heredo.enf_hipertension_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warning">Diabetes</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_diabetes_padre" {{#if antecedentes.heredo.enf_diabetes_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_diabetes_madre" {{#if antecedentes.heredo.enf_diabetes_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_diabetes_abuelos" {{#if antecedentes.heredo.enf_diabetes_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-danger">Cardíacas</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cardiacas_padre" {{#if antecedentes.heredo.enf_cardiacas_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cardiacas_madre" {{#if antecedentes.heredo.enf_cardiacas_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cardiacas_abuelos" {{#if antecedentes.heredo.enf_cardiacas_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-info">Artritis</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_artritis_padre" {{#if antecedentes.heredo.enf_artritis_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_artritis_madre" {{#if antecedentes.heredo.enf_artritis_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_artritis_abuelos" {{#if antecedentes.heredo.enf_artritis_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-info">Psiquiátricas</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_psiquiatricas_padre" {{#if antecedentes.heredo.enf_psiquiatricas_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_psiquiatricas_madre" {{#if antecedentes.heredo.enf_psiquiatricas_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_psiquiatricas_abuelos" {{#if antecedentes.heredo.enf_psiquiatricas_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-info">Epilepsia</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_epilepsia_padre" {{#if antecedentes.heredo.enf_epilepsia_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_epilepsia_madre" {{#if antecedentes.heredo.enf_epilepsia_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_epilepsia_abuelos" {{#if antecedentes.heredo.enf_epilepsia_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-info">Tiroideas</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_tiroideas_padre" {{#if antecedentes.heredo.enf_tiroideas_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_tiroideas_madre" {{#if antecedentes.heredo.enf_tiroideas_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_tiroideas_abuelos" {{#if antecedentes.heredo.enf_tiroideas_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-danger">Cáncer</span></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cancer_padre" {{#if antecedentes.heredo.enf_cancer_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cancer_madre" {{#if antecedentes.heredo.enf_cancer_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_cancer_abuelos" {{#if antecedentes.heredo.enf_cancer_abuelos}}checked{{/if}}></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge badge-info">OTROS</span>
+                <input type="text" class="form-input-inline" id="enf_otros_detalle" value="{{antecedentes.heredo.enf_otros_detalle}}" placeholder="Especifique...">
+              </td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_otros_padre" {{#if antecedentes.heredo.enf_otros_padre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_otros_madre" {{#if antecedentes.heredo.enf_otros_madre}}checked{{/if}}></td>
+              <td><input type="checkbox" class="heredo-checkbox" data-field="enf_otros_abuelos" {{#if antecedentes.heredo.enf_otros_abuelos}}checked{{/if}}></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Observaciones Heredo Familiares -->
+      <div class="obs-editor-container">
+        <label class="obs-label">Observaciones Heredo Familiares</label>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          <div class="obs-toolbar-spacer"></div>
+          <button type="button" class="obs-btn obs-btn-save" onclick="saveObservacion('heredo')" title="Guardar"><i class="fas fa-save"></i></button>
+        </div>
+        <div class="obs-editor" contenteditable="true" id="obs-heredo" placeholder="Escriba observaciones sobre heredo familiares..."></div>
+      </div>
+
+      <h3 class="section-title">Personales No Patológicos</h3>
+      <div class="info-grid" style="margin-bottom:var(--sp-5);">
+        <div class="info-item">
+          <div class="info-label">Tipo Domicilio</div>
+          <select class="form-input" id="nopat_tipo_domicilio">
+            <option value="">Seleccionar</option>
+            <option value="CASA" {{#if (eq antecedentes.noPat.tipo_domicilio "CASA")}}selected{{/if}}>Casa</option>
+            <option value="DEPARTAMENTO" {{#if (eq antecedentes.noPat.tipo_domicilio "DEPARTAMENTO")}}selected{{/if}}>Departamento</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Cuenta con Servicios</div>
+          <select class="form-input" id="nopat_cuenta_servicios" onchange="toggleServicios(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.noPat.cuenta_servicios "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.noPat.cuenta_servicios "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item" id="especifique-servicios" style="{{#if (eq antecedentes.noPat.cuenta_servicios 'NO')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Especifique Servicios</div>
+          <input type="text" class="form-input" id="nopat_especifique_servicios" value="{{antecedentes.noPat.especifique_servicios}}" placeholder="¿Cuáles servicios le faltan?">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Cambio de Ropa</div>
+          <select class="form-input" id="nopat_cambio_ropa">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.noPat.cambio_ropa "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.noPat.cambio_ropa "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Baño Diario</div>
+          <select class="form-input" id="nopat_bano_diario">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.noPat.bano_diario "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.noPat.bano_diario "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Ingesta de Agua</div>
+          <select class="form-input" id="nopat_ingesta_agua">
+            <option value="">Seleccionar</option>
+            <option value="1LT" {{#if (eq antecedentes.noPat.ingesta_agua "1LT")}}selected{{/if}}>1 Lt</option>
+            <option value="2LTS" {{#if (eq antecedentes.noPat.ingesta_agua "2LTS")}}selected{{/if}}>2 Lts</option>
+            <option value="MAS_2LTS" {{#if (eq antecedentes.noPat.ingesta_agua "MAS_2LTS")}}selected{{/if}}>Más de 2 Lts</option>
+            <option value="NINGUNO" {{#if (eq antecedentes.noPat.ingesta_agua "NINGUNO")}}selected{{/if}}>Ninguno</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Actividad Física</div>
+          <select class="form-input" id="nopat_actividad_fisica" onchange="toggleActividad(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.noPat.actividad_fisica "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.noPat.actividad_fisica "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item actividad-fields" style="{{#if (eq antecedentes.noPat.actividad_fisica 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Veces por Semana</div>
+          <input type="number" class="form-input" id="nopat_veces_semana" value="{{antecedentes.noPat.veces_semana}}" placeholder="Ej: 3">
+        </div>
+        <div class="info-item actividad-fields" style="{{#if (eq antecedentes.noPat.actividad_fisica 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Tipo de Actividad</div>
+          <input type="text" class="form-input" id="nopat_tipo_actividad" value="{{antecedentes.noPat.tipo_actividad}}" placeholder="Ej: Correr, nadar, gym">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Horas de Sueño</div>
+          <input type="number" class="form-input" id="nopat_horas_sueno" min="0" max="24" value="{{antecedentes.noPat.horas_sueno}}" placeholder="Ej: 8">
+        </div>
+      </div>
+
+      <!-- Observaciones No Patológicos -->
+      <div class="obs-editor-container">
+        <label class="obs-label">Observaciones Personales No Patológicos</label>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          <div class="obs-toolbar-spacer"></div>
+          <button type="button" class="obs-btn obs-btn-save" onclick="saveObservacion('nopat')" title="Guardar"><i class="fas fa-save"></i></button>
+        </div>
+        <div class="obs-editor" contenteditable="true" id="obs-nopat" placeholder="Escriba observaciones sobre personales no patológicos..."></div>
+      </div>
+
+      <h3 class="section-title">Accidentes Laborales</h3>
+      <div class="info-grid" style="margin-bottom:var(--sp-5);">
+        <div class="info-item">
+          <div class="info-label">¿Ha tenido accidentes laborales?</div>
+          <select class="form-input" id="accidente_laboral" onchange="toggleAccidente(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.accidentes.accidente_laboral "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.accidentes.accidente_laboral "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item accidente-fields" style="{{#if (eq antecedentes.accidentes.accidente_laboral 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Año del Accidente</div>
+          <input type="number" class="form-input" id="accidente_anio" value="{{antecedentes.accidentes.accidente_anio}}" placeholder="Ej: 2020">
+        </div>
+        <div class="info-item accidente-fields" style="{{#if (eq antecedentes.accidentes.accidente_laboral 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Empresa</div>
+          <input type="text" class="form-input" id="accidente_empresa" value="{{antecedentes.accidentes.accidente_empresa}}" placeholder="Nombre de la empresa">
+        </div>
+        <div class="info-item accidente-fields" style="grid-column: span 2;{{#if (eq antecedentes.accidentes.accidente_laboral 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Especifique</div>
+          <textarea class="form-input" id="accidente_especifique" rows="2" placeholder="Describa el accidente...">{{antecedentes.accidentes.accidente_especifique}}</textarea>
+        </div>
+        <div class="info-item accidente-fields" style="{{#if (eq antecedentes.accidentes.accidente_laboral 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">¿Recibió tratamiento?</div>
+          <select class="form-input" id="accidente_tratamiento" onchange="toggleTratamiento(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.accidentes.accidente_tratamiento "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.accidentes.accidente_tratamiento "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item accidente-fields" style="{{#if (eq antecedentes.accidentes.accidente_laboral 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Formato RT09<span class="info-tooltip">i<span class="tooltip-text">El formato RT-09 es un dictamen médico emitido por el ISSSTE (Instituto de Seguridad y Servicios Sociales de los Trabajadores del Estado) que certifica la invalidez o la incapacidad de un trabajador o bien riesgo de trabajo</span></span></div>
+          <select class="form-input" id="formato_rt09">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.accidentes.formato_rt09 "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.accidentes.formato_rt09 "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item tratamiento-fields" style="{{#if (eq antecedentes.accidentes.accidente_tratamiento 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Detalle Tratamiento</div>
+          <input type="text" class="form-input" id="accidente_tratamiento_detalle" value="{{antecedentes.accidentes.accidente_tratamiento_detalle}}" placeholder="Describa el tratamiento">
+        </div>
+      </div>
+
+      <!-- Observaciones Accidentes Laborales -->
+      <div class="obs-editor-container">
+        <label class="obs-label">Observaciones Accidentes Laborales</label>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          <div class="obs-toolbar-spacer"></div>
+          <button type="button" class="obs-btn obs-btn-save" onclick="saveObservacion('accidentes')" title="Guardar"><i class="fas fa-save"></i></button>
+        </div>
+        <div class="obs-editor" contenteditable="true" id="obs-accidentes" placeholder="Escriba observaciones sobre accidentes laborales..."></div>
+      </div>
+
+      <h3 class="section-title">Personales Patológicos</h3>
+      <div class="info-grid" style="margin-bottom:var(--sp-5);">
+        <div class="info-item">
+          <div class="info-label">Consumo de Drogas</div>
+          <select class="form-input" id="pat_consumo_droga" onchange="toggleDroga(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.consumo_droga "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.consumo_droga "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item droga-fields" style="{{#if (eq antecedentes.patologicos.consumo_droga 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Edad Inicio Drogas</div>
+          <input type="number" class="form-input" id="pat_droga_edad" value="{{antecedentes.patologicos.droga_edad}}" placeholder="Edad de inicio">
+        </div>
+        <div class="info-item droga-fields" style="{{#if (eq antecedentes.patologicos.consumo_droga 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">¿Cuáles drogas?</div>
+          <input type="text" class="form-input" id="pat_droga_cuales" value="{{antecedentes.patologicos.droga_cuales}}" placeholder="Especifique las drogas">
+        </div>
+        <div class="info-item droga-fields" style="{{#if (eq antecedentes.patologicos.consumo_droga 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Frecuencia Drogas</div>
+          <input type="text" class="form-input" id="pat_droga_frecuencia" value="{{antecedentes.patologicos.droga_frecuencia}}" placeholder="Ej: Diario, semanal, mensual">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Consumo de Alcohol</div>
+          <select class="form-input" id="pat_consumo_alcohol" onchange="toggleAlcohol(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.consumo_alcohol "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.consumo_alcohol "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item alcohol-fields" style="{{#if (eq antecedentes.patologicos.consumo_alcohol 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Edad Inicio Alcohol</div>
+          <input type="number" class="form-input" id="pat_alcohol_edad" value="{{antecedentes.patologicos.alcohol_edad}}" placeholder="Edad de inicio">
+        </div>
+        <div class="info-item alcohol-fields" style="{{#if (eq antecedentes.patologicos.consumo_alcohol 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Tipo de Alcohol</div>
+          <input type="text" class="form-input" id="pat_alcohol_tipo" value="{{antecedentes.patologicos.alcohol_tipo}}" placeholder="Cerveza, tequila, etc">
+        </div>
+        <div class="info-item alcohol-fields" style="{{#if (eq antecedentes.patologicos.consumo_alcohol 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Cantidad Alcohol</div>
+          <input type="text" class="form-input" id="pat_alcohol_cantidad" value="{{antecedentes.patologicos.alcohol_cantidad}}" placeholder="Ej: 2 cervezas, 1 litro">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Antecedente Fracturas</div>
+          <select class="form-input" id="pat_antecedente_fracturas" onchange="toggleFracturas(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.antecedente_fracturas "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.antecedente_fracturas "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item fracturas-fields" style="{{#if (eq antecedentes.patologicos.antecedente_fracturas 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Especifique Fracturas</div>
+          <input type="text" class="form-input" id="pat_fracturas_especifique" value="{{antecedentes.patologicos.fracturas_especifique}}" placeholder="Describa las fracturas">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Enfermedad Actual</div>
+          <select class="form-input" id="pat_enfermedad_actual" onchange="toggleEnfermedad(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.enfermedad_actual "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.enfermedad_actual "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item enfermedad-fields" style="{{#if (eq antecedentes.patologicos.enfermedad_actual 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Tiempo Enfermedad</div>
+          <input type="text" class="form-input" id="pat_enfermedad_tiempo" value="{{antecedentes.patologicos.enfermedad_tiempo}}" placeholder="Ej: 2 años, 6 meses">
+        </div>
+        <div class="info-item enfermedad-fields" style="grid-column: span 2;{{#if (eq antecedentes.patologicos.enfermedad_actual 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Descripción Enfermedad</div>
+          <textarea class="form-input" id="pat_enfermedad_descripcion" rows="3" placeholder="Describa su padecimiento y los medicamentos que consume...">{{antecedentes.patologicos.enfermedad_descripcion}}</textarea>
+        </div>
+        <div class="info-item">
+          <div class="info-label">¿Consume medicamentos?</div>
+          <select class="form-input" id="pat_consume_medicamentos" onchange="toggleMedicamentos(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.consume_medicamentos "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.consume_medicamentos "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item medicamentos-fields" style="grid-column: span 2;{{#if (eq antecedentes.patologicos.consume_medicamentos 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Describa los medicamentos</div>
+          <textarea class="form-input" id="pat_medicamentos_descripcion" rows="3" placeholder="Describa los medicamentos que consume...">{{antecedentes.patologicos.medicamentos_descripcion}}</textarea>
+        </div>
+        <div class="info-item">
+          <div class="info-label">¿Tiene alergias?</div>
+          <select class="form-input" id="pat_tiene_alergias" onchange="toggleAlergias(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.patologicos.tiene_alergias "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.patologicos.tiene_alergias "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item alergias-fields" style="grid-column: span 2;{{#if (eq antecedentes.patologicos.tiene_alergias 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Describa las alergias</div>
+          <textarea class="form-input" id="pat_alergias_descripcion" rows="3" placeholder="Describa las alergias que presenta...">{{antecedentes.patologicos.alergias_descripcion}}</textarea>
+        </div>
+      </div>
+
+      <!-- Observaciones Patológicos -->
+      <div class="obs-editor-container">
+        <label class="obs-label">Observaciones Personales Patológicos</label>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          <div class="obs-toolbar-spacer"></div>
+          <button type="button" class="obs-btn obs-btn-save" onclick="saveObservacion('patologicos')" title="Guardar"><i class="fas fa-save"></i></button>
+        </div>
+        <div class="obs-editor" contenteditable="true" id="obs-patologicos" placeholder="Escriba observaciones sobre personales patológicos..."></div>
+      </div>
+
+      <!-- Antecedentes Patológicos Adicionales -->
+      <div style="margin-top:var(--sp-5);margin-bottom:var(--sp-5);">
+        <h4 style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);margin-bottom:var(--sp-3);">Antecedentes Patológicos Adicionales</h4>
+        
+        <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_traumatologico" {{#if antecedentes.patologicos.ant_traumatologico}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Antecedentes traumatólogicos o quirúrgicos</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_traumatologico_obs" style="{{#if antecedentes.patologicos.ant_traumatologico}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_traumatologico_obs" style="min-height:50px;" placeholder="Describa los antecedentes traumatólogicos o quirúrgicos...">{{#if antecedentes.patologicos.ant_traumatologico_obs}}{{{antecedentes.patologicos.ant_traumatologico_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_medicamentos_controlados" {{#if antecedentes.patologicos.ant_medicamentos_controlados}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Consumo de medicamentos controlados</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_medicamentos_controlados_obs" style="{{#if antecedentes.patologicos.ant_medicamentos_controlados}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_medicamentos_controlados_obs" style="min-height:50px;" placeholder="Describa el consumo de medicamentos controlados...">{{#if antecedentes.patologicos.ant_medicamentos_controlados_obs}}{{{antecedentes.patologicos.ant_medicamentos_controlados_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_cardiorespiratorias" {{#if antecedentes.patologicos.ant_cardiorespiratorias}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Enfermedades y alteraciones cardiorespiratorias</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_cardiorespiratorias_obs" style="{{#if antecedentes.patologicos.ant_cardiorespiratorias}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_cardiorespiratorias_obs" style="min-height:50px;" placeholder="Describa las enfermedades y alteraciones cardiorespiratorias...">{{#if antecedentes.patologicos.ant_cardiorespiratorias_obs}}{{{antecedentes.patologicos.ant_cardiorespiratorias_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_endocrinologicas" {{#if antecedentes.patologicos.ant_endocrinologicas}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Enfermedades endocrinológicas</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_endocrinologicas_obs" style="{{#if antecedentes.patologicos.ant_endocrinologicas}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_endocrinologicas_obs" style="min-height:50px;" placeholder="Describa las enfermedades endocrinológicas...">{{#if antecedentes.patologicos.ant_endocrinologicas_obs}}{{{antecedentes.patologicos.ant_endocrinologicas_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_musculo_esqueleticas" {{#if antecedentes.patologicos.ant_musculo_esqueleticas}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Alteraciones músculo esqueléticas</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_musculo_esqueleticas_obs" style="{{#if antecedentes.patologicos.ant_musculo_esqueleticas}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_musculo_esqueleticas_obs" style="min-height:50px;" placeholder="Describa las alteraciones músculo esqueléticas...">{{#if antecedentes.patologicos.ant_musculo_esqueleticas_obs}}{{{antecedentes.patologicos.ant_musculo_esqueleticas_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_otros" {{#if antecedentes.patologicos.ant_otros}}checked{{/if}} onchange="toggleAntecedentePat(this)">
+              <span style="font-size:var(--text-sm);">Otros</span>
+            </label>
+            <div class="ant-pat-obs" data-field="ant_otros_obs" style="{{#if antecedentes.patologicos.ant_otros}}display:block;{{else}}display:none;{{/if}} margin-top:var(--sp-2);margin-left:var(--sp-6);min-height:100px;">
+              <div class="obs-editor-container" style="min-height:80px;">
+                <div class="obs-toolbar">
+                  <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                  <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                </div>
+                <div class="obs-editor" contenteditable="true" id="ant_otros_obs" style="min-height:50px;" placeholder="Describa otros antecedentes...">{{#if antecedentes.patologicos.ant_otros_obs}}{{{antecedentes.patologicos.ant_otros_obs}}}{{/if}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" class="ant-pat-check" data-field="ant_ninguno" {{#if antecedentes.patologicos.ant_ninguno}}checked{{/if}} onchange="toggleAntecedenteNinguno(this)">
+              <span style="font-size:var(--text-sm);font-weight:600;">Ninguno</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Salud Sexual</h3>
+      <div class="info-grid" style="margin-bottom:var(--sp-5);">
+        <div class="info-item">
+          <div class="info-label">Inicio Vida Sexual</div>
+          <input type="number" class="form-input" id="sexual_edad_inicio_sexual" value="{{antecedentes.sexual.edad_inicio_sexual}}" placeholder="Edad">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Número de Parejas</div>
+          <input type="number" class="form-input" id="sexual_num_parejas" value="{{antecedentes.sexual.num_parejas}}" placeholder="Número">
+        </div>
+        <div class="info-item">
+          <div class="info-label">ETS</div>
+          <select class="form-input" id="sexual_ets" onchange="toggleETS(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.sexual.ets "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.sexual.ets "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item ets-fields" style="{{#if (eq antecedentes.sexual.ets 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Especifique ETS</div>
+          <input type="text" class="form-input" id="sexual_ets_especifique" value="{{antecedentes.sexual.ets_especifique}}" placeholder="Describa la enfermedad">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Método Anticonceptivo</div>
+          <select class="form-input" id="sexual_anticonceptivo" onchange="toggleAnticonceptivo(this)">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq antecedentes.sexual.anticonceptivo "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq antecedentes.sexual.anticonceptivo "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <div class="info-item anticonceptivo-fields" style="{{#if (eq antecedentes.sexual.anticonceptivo 'SI')}}display:block;{{else}}display:none;{{/if}}">
+          <div class="info-label">Especifique Anticonceptivo</div>
+          <input type="text" class="form-input" id="sexual_anticonceptivo_especifique" value="{{antecedentes.sexual.anticonceptivo_especifique}}" placeholder="Describa el método">
+        </div>
+        {{#if (eq datosGenerales.genero "MUJER")}}
+        <div class="info-item">
+          <div class="info-label">Última Menstruación</div>
+          <input type="date" class="form-input" id="sexual_ultima_menstruacion" value="{{antecedentes.sexual.ultima_menstruacion}}">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Frecuencia Menstrual</div>
+          <input type="text" class="form-input" id="sexual_frecuencia_menstrual" value="{{antecedentes.sexual.frecuencia_menstrual}}" placeholder="Ej: Cada 15 días, cada 28 días">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Número de Partos</div>
+          <input type="number" class="form-input" id="sexual_num_partos" value="{{antecedentes.sexual.num_partos}}" placeholder="Número">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Número de Cesáreas</div>
+          <input type="number" class="form-input" id="sexual_num_cesareas" value="{{antecedentes.sexual.num_cesareas}}" placeholder="Número">
+        </div>
+        <div class="info-item">
+          <div class="info-label">Número de Abortos</div>
+          <input type="number" class="form-input" id="sexual_num_abortos" value="{{antecedentes.sexual.num_abortos}}" placeholder="Número">
+        </div>
+        {{/if}}
+        <div class="info-item" style="grid-column: span 2;">
+          <div class="info-label">Observaciones</div>
+          <textarea class="form-input" id="sexual_observaciones_sexual" rows="3" placeholder="Observaciones adicionales...">{{antecedentes.sexual.observaciones_sexual}}</textarea>
+        </div>
+      </div>
+
+      <!-- Observaciones Salud Sexual -->
+      <div class="obs-editor-container">
+        <label class="obs-label">Observaciones Salud Sexual</label>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+          <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          <div class="obs-toolbar-spacer"></div>
+          <button type="button" class="obs-btn obs-btn-save" onclick="saveObservacion('sexual')" title="Guardar"><i class="fas fa-save"></i></button>
+        </div>
+        <div class="obs-editor" contenteditable="true" id="obs-sexual" placeholder="Escriba observaciones sobre salud sexual..."></div>
+      </div>
+
+      <!-- Botón Guardar Todos los Antecedentes -->
+      <div style="text-align:center;margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:2px solid var(--border);">
+        <button type="button" class="btn btn-primary" onclick="saveAllAntecedentes()" id="btnSaveAllAntecedentes" style="min-width:250px;">
+          <i class="fas fa-save"></i> Guardar Antecedentes
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: Tatuajes -->
+    <div class="tab-panel" id="tab-tatuajes">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);">
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <strong style="font-size:var(--text-sm);">¿Tiene tatuajes?</strong>
+          <select class="form-input" id="tiene_tatuaje" onchange="toggleTatuajes(this)" style="width:120px;">
+            <option value="">Seleccionar</option>
+            <option value="SI" {{#if (eq tatuajes.tiene_tatuaje "SI")}}selected{{/if}}>Sí</option>
+            <option value="NO" {{#if (eq tatuajes.tiene_tatuaje "NO")}}selected{{/if}}>No</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btnAgregarTatuaje" onclick="openTatuajeModal()" style="{{#unless (eq tatuajes.tiene_tatuaje 'SI')}}display:none;{{/unless}}">
+          <i class="fas fa-plus"></i> Agregar Tatuaje
+        </button>
+      </div>
+      <div id="tatuajesContent" style="{{#unless (eq tatuajes.tiene_tatuaje 'SI')}}display:none;{{/unless}}">
+        <div class="obs-editor-container" style="margin-bottom:var(--sp-4);">
+          <label class="obs-label">Observaciones sobre tatuajes</label>
+          <div class="obs-toolbar">
+            <button type="button" class="obs-btn" onclick="execCmd('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmd('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmd('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmd('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            <div class="obs-toolbar-spacer"></div>
+            <button type="button" class="obs-btn obs-btn-save" onclick="saveTatuajeObservaciones()" title="Guardar"><i class="fas fa-save"></i></button>
+          </div>
+          <div class="obs-editor" contenteditable="true" id="obs-tatuajes" placeholder="Escriba observaciones sobre los tatuajes...">{{#if tatuajes.observaciones}}{{tatuajes.observaciones}}{{/if}}</div>
+        </div>
+
+      <!-- Esquemas Corporales SVG -->
+      <div class="body-maps-container">
+        <!-- Vista Frontal -->
+        <div class="map-card">
+          <div class="map-card-header">
+            <span class="map-view-badge front">
+              <i class="fas fa-male"></i> FRONTAL
+            </span>
+          </div>
+          <div class="map-card-body">
+            <svg id="front-human-body-map" class="human-body-map" viewBox="0 0 600 1200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <style>
+                .human-body-map { width: 100%; height: auto; max-height: 60vh; display: block; }
+                .human-body-map .body-zone { fill: #e5e7eb; stroke: #475569; stroke-width: 2.5; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill 160ms ease, stroke 160ms ease; }
+                .human-body-map .body-zone:hover { fill: #cbd5e1; stroke: #0f172a; }
+                .human-body-map .body-zone.has-tattoo { fill: #3b82f6; stroke: #1d4ed8; }
+              </style>
+              <g id="cabeza">
+                <path id="region_facial_derecha" class="body-zone" data-zone="region_facial_derecha" data-label="Región facial derecha" d="M300 64 C263 64 240 90 240 130 C240 171 261 201 300 211 Z"/>
+                <path id="region_facial_izquierda" class="body-zone" data-zone="region_facial_izquierda" data-label="Región facial izquierda" d="M300 64 C337 64 360 90 360 130 C360 171 339 201 300 211 Z"/>
+              </g>
+              <g id="cuello">
+                <path id="cuello_derecho" class="body-zone" data-zone="cuello_derecho" data-label="Cuello derecho" d="M300 211 L270 206 L263 251 L300 270 Z"/>
+                <path id="cuello_izquierdo" class="body-zone" data-zone="cuello_izquierdo" data-label="Cuello izquierdo" d="M300 211 L330 206 L337 251 L300 270 Z"/>
+              </g>
+              <g id="torso">
+                <path id="pectoral_derecho" class="body-zone" data-zone="pectoral_derecho" data-label="Pectoral derecho" d="M300 270 L257 250 C230 258 215 282 211 329 L300 345 Z"/>
+                <path id="pectoral_izquierdo" class="body-zone" data-zone="pectoral_izquierdo" data-label="Pectoral izquierdo" d="M300 270 L343 250 C370 258 385 282 389 329 L300 345 Z"/>
+                <path id="region_costal_derecha" class="body-zone" data-zone="region_costal_derecha" data-label="Región costal derecha" d="M211 329 L300 345 L300 424 L222 414 C216 387 212 356 211 329 Z"/>
+                <path id="region_costal_izquierda" class="body-zone" data-zone="region_costal_izquierda" data-label="Región costal izquierda" d="M389 329 L300 345 L300 424 L378 414 C384 387 388 356 389 329 Z"/>
+                <path id="abdomen_derecho" class="body-zone" data-zone="abdomen_derecho" data-label="Abdomen lado derecho" d="M222 414 L300 424 L300 538 L236 526 C229 489 224 449 222 414 Z"/>
+                <path id="abdomen_izquierdo" class="body-zone" data-zone="abdomen_izquierdo" data-label="Abdomen lado izquierdo" d="M378 414 L300 424 L300 538 L364 526 C371 489 376 449 378 414 Z"/>
+                <path id="region_suprapubica" class="body-zone" data-zone="region_suprapubica" data-label="Región suprapúbica" d="M250 526 L300 538 L350 526 L343 590 L300 615 L257 590 Z"/>
+              </g>
+              <g id="extremidad_superior_derecha">
+                <path id="region_deltoidea_derecha" class="body-zone" data-zone="region_deltoidea_derecha" data-label="Región deltoidea derecha" d="M257 250 C223 244 190 260 176 293 L211 329 C218 287 231 263 257 250 Z"/>
+                <path id="brazo_derecho" class="body-zone" data-zone="brazo_derecho" data-label="Brazo derecho" d="M176 293 C159 327 151 369 147 418 L190 425 C195 388 202 353 211 329 Z"/>
+                <path id="antebrazo_derecho" class="body-zone" data-zone="antebrazo_derecho" data-label="Antebrazo derecho" d="M147 418 C141 469 133 517 122 558 L168 570 C179 519 186 471 190 425 Z"/>
+                <path id="palma_derecha" class="body-zone" data-zone="palma_derecha" data-label="Palma derecha" d="M122 558 C107 563 98 579 101 597 L109 644 C111 657 125 664 137 656 L159 638 C169 630 173 614 168 570 Z"/>
+              </g>
+              <g id="extremidad_superior_izquierda">
+                <path id="region_deltoidea_izquierda" class="body-zone" data-zone="region_deltoidea_izquierda" data-label="Región deltoidea izquierda" d="M343 250 C377 244 410 260 424 293 L389 329 C382 287 369 263 343 250 Z"/>
+                <path id="brazo_izquierdo" class="body-zone" data-zone="brazo_izquierdo" data-label="Brazo izquierdo" d="M424 293 C441 327 449 369 453 418 L410 425 C405 388 398 353 389 329 Z"/>
+                <path id="antebrazo_izquierdo" class="body-zone" data-zone="antebrazo_izquierdo" data-label="Antebrazo izquierdo" d="M453 418 C459 469 467 517 478 558 L432 570 C421 519 414 471 410 425 Z"/>
+                <path id="palma_izquierda" class="body-zone" data-zone="palma_izquierda" data-label="Palma izquierda" d="M478 558 C493 563 502 579 499 597 L491 644 C489 657 475 664 463 656 L441 638 C431 630 427 614 432 570 Z"/>
+              </g>
+              <g id="extremidad_inferior_derecha">
+                <path id="region_coxal_derecha" class="body-zone" data-zone="region_coxal_derecha" data-label="Región coxal derecha" d="M236 526 L250 526 L257 590 L300 615 L300 650 L234 634 C224 602 225 560 236 526 Z"/>
+                <path id="muslo_derecho" class="body-zone" data-zone="muslo_derecho" data-label="Muslo derecho" d="M234 634 L300 650 L294 817 L239 817 C230 756 228 690 234 634 Z"/>
+                <path id="rodilla_derecha" class="body-zone" data-zone="rodilla_derecha" data-label="Rodilla derecha" d="M239 817 L294 817 L291 874 L243 874 Z"/>
+                <path id="pierna_derecha" class="body-zone" data-zone="pierna_derecha" data-label="Pierna derecha" d="M243 874 L291 874 L284 1045 L252 1045 C245 989 242 931 243 874 Z"/>
+                <path id="tobillo_derecho" class="body-zone" data-zone="tobillo_derecho" data-label="Tobillo derecho" d="M252 1045 L284 1045 L282 1091 L254 1091 Z"/>
+                <path id="dorso_pie_derecho" class="body-zone" data-zone="dorso_pie_derecho" data-label="Dorso del pie derecho" d="M254 1091 L282 1091 L300 1134 C304 1147 294 1158 279 1158 L213 1158 C200 1158 195 1145 205 1137 Z"/>
+              </g>
+              <g id="extremidad_inferior_izquierda">
+                <path id="region_coxal_izquierda" class="body-zone" data-zone="region_coxal_izquierda" data-label="Región coxal izquierda" d="M364 526 L350 526 L343 590 L300 615 L300 650 L366 634 C376 602 375 560 364 526 Z"/>
+                <path id="muslo_izquierdo" class="body-zone" data-zone="muslo_izquierdo" data-label="Muslo izquierdo" d="M366 634 L300 650 L306 817 L361 817 C370 756 372 690 366 634 Z"/>
+                <path id="rodilla_izquierda" class="body-zone" data-zone="rodilla_izquierda" data-label="Rodilla izquierda" d="M361 817 L306 817 L309 874 L357 874 Z"/>
+                <path id="pierna_izquierda" class="body-zone" data-zone="pierna_izquierda" data-label="Pierna izquierda" d="M357 874 L309 874 L316 1045 L348 1045 C355 989 358 931 357 874 Z"/>
+                <path id="tobillo_izquierdo" class="body-zone" data-zone="tobillo_izquierdo" data-label="Tobillo izquierdo" d="M348 1045 L316 1045 L318 1091 L346 1091 Z"/>
+                <path id="dorso_pie_izquierdo" class="body-zone" data-zone="dorso_pie_izquierdo" data-label="Dorso del pie izquierdo" d="M346 1091 L318 1091 L300 1134 C296 1147 306 1158 321 1158 L387 1158 C400 1158 405 1145 395 1137 Z"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Vista Posterior -->
+        <div class="map-card">
+          <div class="map-card-header">
+            <span class="map-view-badge back">
+              <i class="fas fa-male" style="transform:scaleX(-1)"></i> POSTERIOR
+            </span>
+          </div>
+          <div class="map-card-body">
+            <svg id="back-human-body-map" class="human-body-map" viewBox="0 0 600 1200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <style>
+                .human-body-map { width: 100%; height: auto; max-height: 60vh; display: block; }
+                .human-body-map .body-zone { fill: #e5e7eb; stroke: #475569; stroke-width: 2.5; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill 160ms ease, stroke 160ms ease; }
+                .human-body-map .body-zone:hover { fill: #cbd5e1; stroke: #0f172a; }
+                .human-body-map .body-zone.has-tattoo { fill: #3b82f6; stroke: #1d4ed8; }
+              </style>
+              <g id="cabeza_posterior">
+                <path id="region_occipital_izquierda" class="body-zone" data-zone="region_occipital_izquierda" data-label="Región occipital izquierda" d="M300 64 C267 64 242 86 240 124 C238 162 258 194 300 208 Z"/>
+                <path id="region_occipital_derecha" class="body-zone" data-zone="region_occipital_derecha" data-label="Región occipital derecha" d="M300 64 C333 64 358 86 360 124 C362 162 342 194 300 208 Z"/>
+              </g>
+              <g id="cuello_posterior">
+                <path id="cuello_post_izquierdo" class="body-zone" data-zone="cuello_post_izquierdo" data-label="Cuello izquierdo" d="M300 208 L270 202 C270 219 267 238 260 255 L300 274 Z"/>
+                <path id="cuello_post_derecho" class="body-zone" data-zone="cuello_post_derecho" data-label="Cuello derecho" d="M300 208 L330 202 C330 219 333 238 340 255 L300 274 Z"/>
+              </g>
+              <g id="regiones_escapulares">
+                <path id="region_escapular_izquierda" class="body-zone" data-zone="region_escapular_izquierda" data-label="Región escapular izquierda" d="M260 255 C232 255 207 268 190 292 L210 353 C222 378 251 388 271 369 C284 356 287 324 300 294 L300 274 Z"/>
+                <path id="region_escapular_derecha" class="body-zone" data-zone="region_escapular_derecha" data-label="Región escapular derecha" d="M340 255 C368 255 393 268 410 292 L390 353 C378 378 349 388 329 369 C316 356 313 324 300 294 L300 274 Z"/>
+              </g>
+              <g id="extremidad_superior_izquierda_post">
+                <path id="brazo_post_izquierdo" class="body-zone" data-zone="brazo_post_izquierdo" data-label="Brazo izquierdo" d="M410 292 C432 320 442 368 447 425 L404 430 C398 384 393 341 390 353 Z"/>
+                <path id="antebrazo_post_izquierdo" class="body-zone" data-zone="antebrazo_post_izquierdo" data-label="Antebrazo izquierdo" d="M404 430 C413 485 422 533 438 584 L482 575 C470 525 461 475 447 425 Z"/>
+                <path id="dorso_mano_izquierda" class="body-zone" data-zone="dorso_mano_izquierda" data-label="Dorso mano izquierda" d="M438 584 C450 612 457 638 458 671 L493 667 C497 637 492 608 482 575 Z"/>
+              </g>
+              <g id="extremidad_superior_derecha_post">
+                <path id="brazo_post_derecho" class="body-zone" data-zone="brazo_post_derecho" data-label="Brazo derecho" d="M190 292 C168 320 158 368 153 425 L196 430 C202 384 207 341 210 353 Z"/>
+                <path id="antebrazo_post_derecho" class="body-zone" data-zone="antebrazo_post_derecho" data-label="Antebrazo derecho" d="M196 430 C187 485 178 533 162 584 L118 575 C130 525 139 475 153 425 Z"/>
+                <path id="dorso_mano_derecha" class="body-zone" data-zone="dorso_mano_derecha" data-label="Dorso mano derecha" d="M162 584 C150 612 143 638 142 671 L107 667 C103 637 108 608 118 575 Z"/>
+              </g>
+              <g id="espalda">
+                <path id="region_dorsal_izquierda" class="body-zone" data-zone="region_dorsal_izquierda" data-label="Región dorsal izquierda" d="M300 274 C334 290 359 333 372 405 C378 445 380 480 380 540 L300 540 Z"/>
+                <path id="region_dorsal_derecha" class="body-zone" data-zone="region_dorsal_derecha" data-label="Región dorsal derecha" d="M300 274 C266 290 241 333 228 405 C222 445 220 480 220 540 L300 540 Z"/>
+                <path id="region_lumbar" class="body-zone" data-zone="region_lumbar" data-label="Región lumbar" d="M220 540 L380 540 L366 618 L234 618 Z"/>
+              </g>
+              <g id="regiones_gluteas">
+                <path id="region_glutea_izquierda" class="body-zone" data-zone="region_glutea_izquierda" data-label="Región glútea izquierda" d="M300 618 L366 618 C378 632 384 655 381 681 C377 718 351 742 316 738 C307 736 302 730 300 722 Z"/>
+                <path id="region_glutea_derecha" class="body-zone" data-zone="region_glutea_derecha" data-label="Región glútea derecha" d="M300 618 L234 618 C222 632 216 655 219 681 C223 718 249 742 284 738 C293 736 298 730 300 722 Z"/>
+              </g>
+              <g id="muslos_posteriores">
+                <path id="muslo_post_izquierdo" class="body-zone" data-zone="muslo_post_izquierdo" data-label="Muslo izquierdo" d="M316 738 C340 742 361 750 372 770 C370 821 366 870 360 918 L311 918 C307 866 304 808 304 751 C306 744 310 740 316 738 Z"/>
+                <path id="muslo_post_derecho" class="body-zone" data-zone="muslo_post_derecho" data-label="Muslo derecho" d="M284 738 C260 742 239 750 228 770 C230 821 234 870 240 918 L289 918 C293 866 296 808 296 751 C294 744 290 740 284 738 Z"/>
+              </g>
+              <g id="regiones_popliteas">
+                <path id="region_poplitea_izquierda" class="body-zone" data-zone="region_poplitea_izquierda" data-label="Región poplítea izquierda" d="M311 918 L360 918 L357 973 L315 973 Z"/>
+                <path id="region_poplitea_derecha" class="body-zone" data-zone="region_poplitea_derecha" data-label="Región poplítea derecha" d="M289 918 L240 918 L243 973 L285 973 Z"/>
+              </g>
+              <g id="piernas_posteriores">
+                <path id="pierna_post_izquierda" class="body-zone" data-zone="pierna_post_izquierda" data-label="Pierna izquierda" d="M315 973 L357 973 C356 1022 352 1068 346 1107 L320 1107 C317 1064 315 1018 315 973 Z"/>
+                <path id="pierna_post_derecha" class="body-zone" data-zone="pierna_post_derecha" data-label="Pierna derecha" d="M285 973 L243 973 C244 1022 248 1068 254 1107 L280 1107 C283 1064 285 1018 285 973 Z"/>
+              </g>
+              <g id="tobillos_posteriores">
+                <path id="tobillo_post_izquierdo" class="body-zone" data-zone="tobillo_post_izquierdo" data-label="Tobillo izquierdo" d="M320 1107 L346 1107 L345 1141 L321 1141 Z"/>
+                <path id="tobillo_post_derecho" class="body-zone" data-zone="tobillo_post_derecho" data-label="Tobillo derecho" d="M280 1107 L254 1107 L255 1141 L279 1141 Z"/>
+              </g>
+              <g id="talones">
+                <path id="talon_izquierdo" class="body-zone" data-zone="talon_izquierdo" data-label="Talón izquierdo" d="M321 1141 L345 1141 C354 1148 360 1157 360 1167 C360 1177 352 1185 340 1185 L320 1185 C312 1185 307 1179 308 1171 C309 1160 314 1149 321 1141 Z"/>
+                <path id="talon_derecho" class="body-zone" data-zone="talon_derecho" data-label="Talón derecho" d="M279 1141 L255 1141 C246 1148 240 1157 240 1167 C240 1177 248 1185 260 1185 L280 1185 C288 1185 293 1179 292 1171 C291 1160 286 1149 279 1141 Z"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="body-legend">
+        <span><span class="legend-dot has-tattoo"></span> Con tatuaje</span>
+        <span><span class="legend-dot no-tattoo"></span> Sin tatuaje</span>
+      </div>
+
+      <!-- Tabla de Tatuajes -->
+      {{#if tatuajesDetalle.length}}
+      <div class="table-container" style="margin-top:var(--sp-4);">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Zona</th>
+              <th>Tamaño</th>
+              <th>Descripción</th>
+              <th>Significado</th>
+              <th>Costo</th>
+              <th>Año</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each tatuajesDetalle}}
+            <tr data-id="{{this.id_tatuaje_detalle}}">
+              <td>{{@index}}</td>
+              <td>{{this.zona}}</td>
+              <td>{{tamanoACm this.tamano}}</td>
+              <td>{{this.descripcion}}</td>
+              <td>{{this.significado}}</td>
+              <td>{{this.costo}}</td>
+              <td>{{this.anio}}</td>
+              <td>
+                <button class="btn btn-ghost btn-sm" onclick="editTatuaje({{this.id_tatuaje_detalle}})" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="deleteTatuaje({{this.id_tatuaje_detalle}})" title="Eliminar" style="color:var(--danger);">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+      {{/if}}
+      </div>
+    </div>
+
+    <!-- Tab: Documentación -->
+    <div class="tab-panel" id="tab-documentacion">
+      <div class="instruction-box" style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-4);">
+        <p style="font-size:var(--text-sm);color:var(--blue-800);margin:0;">
+          <i class="fas fa-info-circle" style="color:var(--blue-600);"></i>
+          Adjunte el último resumen clínico, receta médica, formato RT-09 o dictamen con el que cuente sobre el o los padecimientos actuales del evaluado. Estos documentos serán verificados durante el proceso de evaluación.
+        </p>
+      </div>
+
+      {{#if documentos.length}}
+      <!-- Documento cargado -->
+      <div class="documento-cargado-card" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-4);">
+        <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+          <div style="width:48px;height:48px;background:var(--red-100);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-file-pdf" style="color:var(--red-600);font-size:1.5rem;"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600;color:var(--gray-900);">
+              {{#if documentos.[0].tipo_documento}}
+                {{#if (eq documentos.[0].tipo_documento "RT-09")}}Formato RT-09
+                {{else if (eq documentos.[0].tipo_documento "RESUMEN_CLINICO")}}Resumen Clínico
+                {{else if (eq documentos.[0].tipo_documento "RECETA_MEDICA")}}Receta Médica
+                {{else if (eq documentos.[0].tipo_documento "DICTAMEN")}}Dictamen Médico
+                {{else}}{{documentos.[0].tipo_documento}}
+                {{/if}}
+              {{else}}Documento médico
+              {{/if}}
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--gray-500);">Cargado: {{documentos.[0].creado}}</div>
+            {{#if documentos.[0].observaciones}}
+            <div style="font-size:var(--text-sm);color:var(--gray-600);margin-top:var(--sp-1);">{{documentos.[0].observaciones}}</div>
+            {{/if}}
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--sp-2);">
+          <a href="/consulta/documento/{{documentos.[0].filename}}" target="_blank" class="btn btn-primary btn-sm">
+            <i class="fas fa-eye"></i> Ver
+          </a>
+          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarDocumento()">
+            <i class="fas fa-trash-alt"></i> Eliminar
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="mostrarFormularioUpload()">
+            <i class="fas fa-sync-alt"></i> Reemplazar
+          </button>
+        </div>
+      </div>
+      {{/if}}
+
+      <!-- Formulario de subida -->
+      <div id="upload-section" style="{{#if documentos.length}}display:none;{{/if}}">
+        <h3 style="font-size:var(--text-lg);font-weight:600;color:var(--gray-900);margin-bottom:var(--sp-3);">
+          <i class="fas fa-cloud-upload-alt" style="color:var(--blue-600);"></i> Subir Documento
+        </h3>
+        <p style="font-size:var(--text-sm);color:var(--gray-500);margin-bottom:var(--sp-3);">Formato permitido: PDF (Max. 2MB)</p>
+
+        <form id="form-documentos" enctype="multipart/form-data">
+          {{#if (eq antecedentes.accidentes.formato_rt09 "SI")}}
+          <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-3);">
+            <p style="font-size:var(--text-sm);color:var(--blue-800);margin:0;">
+              <i class="fas fa-info-circle" style="color:var(--blue-600);"></i>
+              Indicaste que cuentas con <strong>Formato RT-09</strong>. Por favor, adjunta el documento.
+            </p>
+          </div>
+          <input type="hidden" name="tipo_documento" value="RT-09">
+          {{else}}
+          <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-3);">
+            <p style="font-size:var(--text-sm);color:var(--blue-800);margin:0;">
+              <i class="fas fa-info-circle" style="color:var(--blue-600);"></i>
+              Selecciona el tipo de documento que vas a cargar: Resumen Clínico, Receta Médica o Dictamen.
+            </p>
+          </div>
+          <div class="form-group" style="margin-bottom:var(--sp-3);">
+            <label class="form-label">Tipo de documento *</label>
+            <select class="form-input" name="tipo_documento" id="tipoDocumento" required>
+              <option value="">Seleccionar tipo de documento</option>
+              <option value="RESUMEN_CLINICO">Resumen Clínico</option>
+              <option value="RECETA_MEDICA">Receta Médica</option>
+              <option value="DICTAMEN">Dictamen Médico</option>
+            </select>
+          </div>
+          {{/if}}
+
+          <div class="upload-zone" id="dropZone" style="border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:var(--sp-6);text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size:2rem;color:var(--gray-400);margin-bottom:var(--sp-2);">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <p style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:var(--sp-1);">Arrastra y suelta el archivo aquí</p>
+            <p style="font-size:var(--text-xs);color:var(--gray-400);margin-bottom:var(--sp-2);">o</p>
+            <button type="button" class="btn btn-secondary btn-sm">
+              <i class="fas fa-folder-open"></i> Seleccionar Archivo
+            </button>
+            <input type="file" id="fileInput" name="file" accept=".pdf" style="display:none;" onchange="previewPDF(this)" required>
+            <p style="font-size:var(--text-xs);color:var(--gray-400);margin-top:var(--sp-2);">PDF (Max. 2MB)</p>
+          </div>
+
+          <!-- Previsualización del PDF -->
+          <div id="pdfPreview" style="display:none;margin-top:var(--sp-4);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-2);">
+              <span style="font-weight:600;color:var(--gray-900);">Vista previa del documento</span>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="removePreview()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div style="border:1px solid var(--gray-200);border-radius:var(--radius-md);overflow:hidden;">
+              <embed id="pdfEmbed" type="application/pdf" width="100%" height="500px">
+            </div>
+            <div style="margin-top:var(--sp-3);">
+              <div class="form-group" style="margin-bottom:var(--sp-3);">
+                <label class="form-label">Observaciones</label>
+                <textarea class="form-input" name="observaciones" id="docObservaciones" rows="2" placeholder="Ingrese observaciones sobre el documento..."></textarea>
+              </div>
+              <button type="button" class="btn btn-primary" onclick="subirDocumento()">
+                <i class="fas fa-cloud-upload-alt"></i> Subir
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tab: Exploración Física -->
+    <div class="tab-panel" id="tab-exploracion">
+      <h3 class="section-title">INTERROGATORIO POR APARATOS Y SISTEMAS</h3>
+      
+      <div style="margin-bottom:var(--sp-4);">
+        <p style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:var(--sp-3);">
+          Seleccione los aparatos o sistemas que presentan hallazgos y agregue sus observaciones:
+        </p>
+
+        <!-- 1. Cardiorrespiratorio -->
+        <div style="margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="cardiorespiratorio" onchange="toggleExploracion(this)">
+            <span style="font-weight:500;">1. Aparato cardiorrespiratorio</span>
+          </label>
+          <div id="group-cardiorespiratorio" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('cardiorespiratorio','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('cardiorespiratorio','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('cardiorespiratorio','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('cardiorespiratorio','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-cardiorespiratorio" data-campo="cardiorespiratorio_obs" placeholder="Escriba observaciones..."></div>
+          </div>
+        </div>
+
+        <!-- 2. Endócrino -->
+        <div style="margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="endocrino" onchange="toggleExploracion(this)">
+            <span style="font-weight:500;">2. Aparato Endócrino</span>
+          </label>
+          <div id="group-endocrino" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('endocrino','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('endocrino','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('endocrino','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('endocrino','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-endocrino" data-campo="endocrino_obs" placeholder="Escriba observaciones..."></div>
+          </div>
+        </div>
+
+        <!-- 3. Osteomuscular -->
+        <div style="margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="osteomuscular" onchange="toggleExploracion(this)">
+            <span style="font-weight:500;">3. Aparato Osteomuscular</span>
+          </label>
+          <div id="group-osteomuscular" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('osteomuscular','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('osteomuscular','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('osteomuscular','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('osteomuscular','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-osteomuscular" data-campo="osteomuscular_obs" placeholder="Escriba observaciones..."></div>
+          </div>
+        </div>
+
+        <!-- 4. Neuropsiquiátrico -->
+        <div style="margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="neuropsiquiatrico" onchange="toggleExploracion(this)">
+            <span style="font-weight:500;">4. Sistema Neuropsiquiátrico</span>
+          </label>
+          <div id="group-neuropsiquiatrico" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('neuropsiquiatrico','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('neuropsiquiatrico','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('neuropsiquiatrico','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('neuropsiquiatrico','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-neuropsiquiatrico" data-campo="neuropsiquiatrico_obs" placeholder="Escriba observaciones..."></div>
+          </div>
+        </div>
+
+        <!-- 5. Otros -->
+        <div style="margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="otros" onchange="toggleExploracion(this)">
+            <span style="font-weight:500;">5. Otros</span>
+          </label>
+          <div id="group-otros" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('otros','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('otros','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('otros','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('otros','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-otros" data-campo="otros_obs" placeholder="Escriba observaciones..."></div>
+          </div>
+        </div>
+
+        <!-- 6. Sin datos de relevancia -->
+        <div style="border-top:1px solid var(--gray-200);padding-top:var(--sp-3);margin-top:var(--sp-2);margin-bottom:var(--sp-3);">
+          <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+            <input type="checkbox" class="exploracion-check" data-campo="sin_datos" onchange="toggleSinDatos(this)">
+            <span style="font-weight:500;">6. Sin datos de relevancia</span>
+          </label>
+          <div id="group-sin_datos" class="exploracion-group" style="display:none;margin-top:var(--sp-2);margin-left:var(--sp-6);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('sin_datos','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('sin_datos','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('sin_datos','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracion('sin_datos','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="exp-sin_datos" data-campo="sin_datos_obs">Sin datos de relevancia</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HABITUS EXTERIOR -->
+      <div style="margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:2px solid var(--gray-200);">
+        <h3 class="section-title">HABITUS EXTERIOR</h3>
+        <div class="obs-toolbar">
+          <button type="button" class="obs-btn" onclick="execCmdHabitus('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdHabitus('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdHabitus('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdHabitus('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          </div>
+          <div class="obs-editor" contenteditable="true" id="exp-habitus_exterior" placeholder="Escriba observaciones sobre el habitus exterior..."></div>
+        </div>
+
+        <!-- Botón guardar -->
+        <div style="text-align:right;margin-top:var(--sp-4);">
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveExploracionFisica()">
+            <i class="fas fa-save"></i> Guardar Exploración Física
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Somatometría y Signos Vitales -->
+    <div class="tab-panel" id="tab-somatometria">
+      <h3 class="section-title">SOMATOMETRÍA</h3>
+      
+      <div style="margin-bottom:var(--sp-4);">
+        <p style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:var(--sp-4);">
+          Capture los datos de somatometría del evaluado. El IMC se calculará automáticamente.
+        </p>
+
+        <div class="info-grid" style="margin-bottom:var(--sp-4);">
+          <div class="info-item">
+            <div class="info-label">Peso (kg)</div>
+            <input type="number" class="form-input" id="soma_peso" step="0.01" min="0" max="300" placeholder="Ej: 75.5" oninput="calcularIMC()">
+          </div>
+          <div class="info-item">
+            <div class="info-label">Talla (m)</div>
+            <input type="number" class="form-input" id="soma_talla" step="0.01" min="0" max="2.5" placeholder="Ej: 1.75" oninput="calcularIMC()">
+          </div>
+          <div class="info-item">
+            <div class="info-label">IMC (kg/m²)</div>
+            <input type="text" class="form-input" id="soma_imc" readonly placeholder="Se calcula automáticamente" style="background:var(--gray-100);cursor:not-allowed;">
+          </div>
+        </div>
+
+        <!-- Indicador de IMC -->
+        <div id="imc-indicator" style="display:none;margin-bottom:var(--sp-4);padding:var(--sp-3);border-radius:var(--radius-md);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);">
+            <span id="imc-icon" style="font-size:1.2rem;"></span>
+            <div>
+              <strong id="imc-category" style="font-size:var(--text-sm);"></strong>
+              <p id="imc-description" style="font-size:var(--text-xs);color:var(--gray-600);margin:0;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado Nutricional -->
+        <h3 class="section-title">ESTADO NUTRICIONAL</h3>
+        <div style="margin-bottom:var(--sp-4);">
+          <div class="obs-toolbar">
+            <button type="button" class="obs-btn" onclick="execCmdEstadoNutricional('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdEstadoNutricional('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdEstadoNutricional('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="obs-btn" onclick="execCmdEstadoNutricional('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+          </div>
+          <div class="obs-editor" contenteditable="true" id="soma_estado_nutricional" placeholder="Especifique el estado nutricional del evaluado..."></div>
+        </div>
+
+        <!-- Signos Vitales -->
+        <h3 class="section-title">SIGNOS VITALES</h3>
+        <div class="info-grid" style="margin-bottom:var(--sp-4);">
+          <div class="info-item">
+            <div class="info-label">Presión Arterial (mmHg)</div>
+            <input type="text" class="form-input" id="soma_presion_arterial" placeholder="Ej: 120/80">
+          </div>
+          <div class="info-item">
+            <div class="info-label">Frecuencia Cardíaca (L x min)</div>
+            <input type="number" class="form-input" id="soma_frecuencia_cardiaca" min="0" max="300" placeholder="Ej: 80">
+          </div>
+          <div class="info-item">
+            <div class="info-label">Frecuencia Respiratoria (R x min)</div>
+            <input type="number" class="form-input" id="soma_frecuencia_respiratoria" min="0" max="100" placeholder="Ej: 18">
+          </div>
+        </div>
+
+        <!-- Agudeza Visual -->
+        <h3 class="section-title">AGUDEZA VISUAL</h3>
+        
+        <div style="margin-bottom:var(--sp-4);">
+          <!-- Ojo Derecho -->
+          <h4 style="font-weight:600;color:var(--gray-700);margin-bottom:var(--sp-3);font-size:var(--text-sm);">OJO DERECHO</h4>
+          <div class="info-grid" style="margin-bottom:var(--sp-4);">
+            <div class="info-item">
+              <div class="info-label">Sin Corrección</div>
+              <select class="form-input" id="av_od_sin_correccion">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Con Corrección</div>
+              <select class="form-input" id="av_od_con_correccion">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Estenopeico</div>
+              <select class="form-input" id="av_od_estenopeico">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ojo Izquierdo -->
+          <h4 style="font-weight:600;color:var(--gray-700);margin-bottom:var(--sp-3);font-size:var(--text-sm);">OJO IZQUIERDO</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Sin Corrección</div>
+              <select class="form-input" id="av_oi_sin_correccion">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Con Corrección</div>
+              <select class="form-input" id="av_oi_con_correccion">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Estenopeico</div>
+              <select class="form-input" id="av_oi_estenopeico">
+                <option value="">Seleccionar</option>
+                <option value="20/20">20/20</option>
+                <option value="20/25">20/25</option>
+                <option value="20/30">20/30</option>
+                <option value="20/40">20/40</option>
+                <option value="20/50">20/50</option>
+                <option value="20/70">20/70</option>
+                <option value="20/100">20/100</option>
+                <option value="20/200">20/200</option>
+                <option value="20/400">20/400</option>
+                <option value="20/800">20/800</option>
+                <option value="NO VALORABLE">NO VALORABLE</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Test Ishihara -->
+          <h4 style="font-weight:600;color:var(--gray-700);margin-bottom:var(--sp-3);font-size:var(--text-sm);margin-top:var(--sp-4);">TEST ISHIHARA</h4>
+          <div style="margin-bottom:var(--sp-3);">
+            <div class="info-item" style="max-width:300px;">
+              <div class="info-label">Resultado</div>
+              <select class="form-input" id="av_ishihara" onchange="toggleIshihara(this)">
+                <option value="">Seleccionar</option>
+                <option value="NEGATIVO">Negativo</option>
+                <option value="POSITIVO">Positivo</option>
+              </select>
+            </div>
+          </div>
+          <div id="ishihara-detalle-group" style="display:none;margin-bottom:var(--sp-4);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdIshihara('bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdIshihara('underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdIshihara('insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdIshihara('insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="av_ishihara_detalle" placeholder="Especifique los hallazgos del test de Ishihara..."></div>
+          </div>
+
+          <!-- Exploración -->
+          <h3 class="section-title">EXPLORACIÓN</h3>
+          <div style="margin-bottom:var(--sp-4);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('exploracion','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('exploracion','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('exploracion','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('exploracion','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="av_exploracion" placeholder="Escriba la exploración..."></div>
+          </div>
+
+          <!-- Síntesis Técnica -->
+          <h3 class="section-title">SÍNTESIS TÉCNICA</h3>
+          <div style="margin-bottom:var(--sp-4);">
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('sintesis_tecnica','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('sintesis_tecnica','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('sintesis_tecnica','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('sintesis_tecnica','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="av_sintesis_tecnica" placeholder="Escriba la síntesis técnica..."></div>
+            <div style="margin-top:var(--sp-3);">
+              <div class="info-item" style="max-width:300px;">
+                <div class="info-label">Resultado</div>
+                <select class="form-input" id="av_sintesis_resultado">
+                  <option value="">Seleccionar</option>
+                  <option value="ALTO RIESGO">Alto Riesgo</option>
+                  <option value="MEDIANO RIESGO">Mediano Riesgo</option>
+                  <option value="BAJO RIESGO">Bajo Riesgo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOC -->
+          <h3 class="section-title">LOC</h3>
+          <div style="margin-bottom:var(--sp-3);">
+            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+              <input type="checkbox" id="av_loc" onchange="toggleLOC(this)">
+              <span style="font-weight:500;">Habilitar LOC</span>
+            </label>
+          </div>
+          <div id="loc-detalle-group" style="display:none;margin-bottom:var(--sp-4);">
+            <div style="margin-bottom:var(--sp-3);">
+              <div class="info-item" style="max-width:300px;">
+                <div class="info-label">Número de Evaluación LOC <span style="color:var(--danger);">*</span></div>
+                <input type="number" class="form-input" id="av_loc_num_evaluacion" min="1" placeholder="Ingrese el número de evaluación LOC">
+              </div>
+            </div>
+            <div class="obs-toolbar">
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('loc_detalle','bold')" title="Negritas"><i class="fas fa-bold"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('loc_detalle','underline')" title="Subrayar"><i class="fas fa-underline"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('loc_detalle','insertUnorderedList')" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="obs-btn" onclick="execCmdExploracionAV('loc_detalle','insertOrderedList')" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="obs-editor" contenteditable="true" id="av_loc_detalle" placeholder="Escriba los detalles de LOC..."></div>
+            <div style="margin-top:var(--sp-3);">
+              <div class="info-item" style="max-width:300px;">
+                <div class="info-label">Resultado LOC</div>
+                <select class="form-input" id="av_loc_resultado">
+                  <option value="">Seleccionar</option>
+                  <option value="CUBRE PERFIL">Cubre Perfil</option>
+                  <option value="NO CUBRE PERFIL">No Cubre Perfil</option>
+                  <option value="NO CUBRE PERFIL PERMANENTE">No Cubre Perfil Permanente</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón guardar -->
+        <div style="text-align:right;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveSomatometria()">
+            <i class="fas fa-save"></i> Guardar Somatometría
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const id_eval = {{id_eval}};
+  const tatuajesDetalle = {{{json tatuajesDetalle}}};
+  const observaciones = {{{json observaciones}}};
+  const isFinalizado = {{#if finalizado}}true{{else}}false{{/if}};
+  let activeTooltip = null;
+
+  // Deshabilitar edición si el expediente está finalizado
+  function disableEditingIfFinalized() {
+    if (!isFinalizado) return;
+
+    // Ocultar todos los botones de guardar
+    document.querySelectorAll('.btn-primary').forEach(btn => {
+      if (btn.textContent.includes('Guardar') || btn.textContent.includes('Subir')) {
+        btn.style.display = 'none';
+      }
+    });
+
+    // Deshabilitar todos los inputs, selects y textareas (excepto los del modal SICOC)
+    document.querySelectorAll('.form-input, input[type="text"], input[type="number"], input[type="date"], input[type="tel"], input[type="file"], select, textarea').forEach(el => {
+      // No deshabilitar si está dentro del modal SICOC
+      if (el.closest('#sicocModal')) return;
+      el.disabled = true;
+      el.style.opacity = '0.6';
+      el.style.cursor = 'not-allowed';
+    });
+
+    // Deshabilitar contenteditable
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+      el.contentEditable = 'false';
+      el.style.opacity = '0.6';
+      el.style.cursor = 'not-allowed';
+    });
+
+    // Deshabilitar checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(el => {
+      el.disabled = true;
+      el.style.opacity = '0.6';
+      el.style.cursor = 'not-allowed';
+    });
+
+    // ===== TATUAJES =====
+    // Ocultar botones de acción en tatuajes
+    document.querySelectorAll('.btn-ghost[onclick*="editTatuaje"], .btn-ghost[onclick*="deleteTatuaje"]').forEach(btn => {
+      btn.style.display = 'none';
+    });
+
+    // Ocultar botón de agregar tatuaje
+    document.querySelectorAll('button[onclick="openTatuajeModal()"]').forEach(btn => {
+      btn.style.display = 'none';
+    });
+
+    // Deshabilitar zonas SVG del mapa corporal
+    document.querySelectorAll('.body-zone').forEach(zone => {
+      zone.style.cursor = 'not-allowed';
+      zone.style.pointerEvents = 'none';
+    });
+
+    // Ocultar toolbar de editores rich text
+    document.querySelectorAll('.obs-toolbar').forEach(toolbar => {
+      toolbar.style.display = 'none';
+    });
+
+    // ===== DOCUMENTACIÓN =====
+    // Ocultar sección de upload de documentos
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) {
+      uploadSection.style.display = 'none';
+    }
+
+    // Ocultar botones de eliminar y reemplazar documentos
+    document.querySelectorAll('.btn-danger[onclick*="eliminarDocumento"], .btn-secondary[onclick*="mostrarFormularioUpload"]').forEach(btn => {
+      btn.style.display = 'none';
+    });
+  }
+
+  // Calcular edad a partir de fecha de nacimiento
+  function calcularEdad() {
+    const fechaInput = document.getElementById('dg_fecha_nacimiento').value;
+    const edadInput = document.getElementById('dg_edad');
+    if (!fechaInput) {
+      edadInput.value = '';
+      return;
+    }
+    const nacimiento = new Date(fechaInput + 'T00:00:00');
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    edadInput.value = edad >= 0 ? edad : '';
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Calcular edad si ya hay fecha de nacimiento
+    calcularEdad();
+
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('tab-' + tabId).classList.add('active');
+        // Guardar tab activo en URL
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabId);
+        window.history.replaceState({}, '', url);
+      });
+    });
+
+    // Activar tab desde URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+      const tabBtn = document.querySelector(`[data-tab="${activeTab}"]`);
+      const tabPanel = document.getElementById('tab-' + activeTab);
+      if (tabBtn && tabPanel) {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        tabBtn.classList.add('active');
+        tabPanel.classList.add('active');
+      }
+    }
+
+    // Cargar observaciones en editores
+    loadObservaciones();
+
+    // Cargar exploración física
+    loadExploracionFisica();
+
+    // Cargar somatometría
+    loadSomatometria();
+
+    // Inicializar mapa corporal
+    initBodyMap();
+    markTattooZones();
+
+    // Deshabilitar edición si está finalizado
+    disableEditingIfFinalized();
+
+    // Verificar si se necesita mostrar modal SICOC
+    checkSicocModal();
+  });
+
+  // Mostrar modal SICOC si no tiene número de evaluación
+  function checkSicocModal() {
+    const tieneConsecutivo = {{#if enlaceSicoc.evalConsecutivo}}true{{else}}false{{/if}};
+    if (!tieneConsecutivo) {
+      document.getElementById('sicocModal').style.display = 'flex';
+    }
+  }
+
+  // Variables globales para SICOC
+  let datosSicocEncontrados = null;
+
+  // Verificar evaluación en SICOC
+  async function verificarSicoc() {
+    const input = document.getElementById('sicoc_eval_consecutivo');
+    const valor = input.value.trim();
+    const errorDiv = document.getElementById('sicocError');
+    const btnVerificar = document.getElementById('btnVerificarSicoc');
+    
+    // Limpiar errores previos
+    errorDiv.style.display = 'none';
+    input.style.borderColor = '';
+    
+    if (!valor) {
+      input.style.borderColor = 'var(--red-500)';
+      errorDiv.textContent = 'Ingrese un número de evaluación';
+      errorDiv.style.display = 'block';
+      input.focus();
+      return;
+    }
+
+    // Deshabilitar botón mientras se consulta
+    btnVerificar.disabled = true;
+    btnVerificar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+
+    try {
+      const response = await fetch(`/consulta/sicoc/verificar/${valor}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        datosSicocEncontrados = data.data;
+        
+        // Llenar datos en el paso 2
+        document.getElementById('sicocNombre').textContent = data.data.empNombreCompleto || '-';
+        document.getElementById('sicocNumEmpleado').textContent = data.data.evalNumEmpleado || '-';
+        document.getElementById('sicocConsecutivo').textContent = data.data.evalConsecutivo || '-';
+        document.getElementById('sicocSubprograma').textContent = data.data.spgClave || '-';
+        document.getElementById('sicocAdscripcion').textContent = data.data.evalAdscripcion || '-';
+        document.getElementById('sicocCargo').textContent = data.data.cgCargo || '-';
+        
+        // Mostrar paso 2
+        document.getElementById('sicocStep1').style.display = 'none';
+        document.getElementById('sicocStep2').style.display = 'block';
+      } else {
+        errorDiv.textContent = data.message || 'No se encontró la evaluación en SICOC';
+        errorDiv.style.display = 'block';
+        input.style.borderColor = 'var(--red-500)';
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      errorDiv.textContent = 'Error al conectar con SICOC';
+      errorDiv.style.display = 'block';
+    } finally {
+      btnVerificar.disabled = false;
+      btnVerificar.innerHTML = '<i class="fas fa-search"></i> Verificar';
+    }
+  }
+
+  // Resetear modal SICOC al paso 1
+  function resetSicocModal() {
+    document.getElementById('sicocStep1').style.display = 'block';
+    document.getElementById('sicocStep2').style.display = 'none';
+    document.getElementById('sicocStep3').style.display = 'none';
+    document.getElementById('sicocError').style.display = 'none';
+    document.getElementById('sicoc_eval_consecutivo').style.borderColor = '';
+    datosSicocEncontrados = null;
+  }
+
+  // Confirmar enlace a SICOC
+  async function confirmarEnlaceSicoc() {
+    const btnConfirmar = document.getElementById('btnConfirmarSicoc');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enlazando...';
+
+    try {
+      const valor = document.getElementById('sicoc_eval_consecutivo').value.trim();
+      const response = await fetch(`/consulta/expediente/${id_eval}/enlazar-sicoc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evalConsecutivo: valor })
+      });
+      
+      const data = await response.json();
+
+      if (data.success) {
+        // Actualizar campo en la vista
+        document.getElementById('eval_consecutivo_display').value = valor;
+        
+        // Mostrar paso 3 (éxito)
+        document.getElementById('sicocStep2').style.display = 'none';
+        document.getElementById('sicocStep3').style.display = 'block';
+      } else {
+        alert('Error: ' + (data.message || 'No se pudo enlazar la evaluación'));
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-link"></i> Confirmar Enlace';
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al enlazar la evaluación');
+      btnConfirmar.disabled = false;
+      btnConfirmar.innerHTML = '<i class="fas fa-link"></i> Confirmar Enlace';
+    }
+  }
+
+  // Cerrar modal SICOC y recargar página
+  function closeSicocModal() {
+    document.getElementById('sicocModal').style.display = 'none';
+    resetSicocModal();
+    // Recargar la página para obtener los datos actualizados
+    window.location.reload();
+  }
+
+  // Permitir Enter en el input de SICOC y prevenir cierre del modal
+  document.addEventListener('DOMContentLoaded', function() {
+    const sicocInput = document.getElementById('sicoc_eval_consecutivo');
+    if (sicocInput) {
+      sicocInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          verificarSicoc();
+        }
+      });
+    }
+
+    // Prevenir cierre del modal SICOC al hacer clic fuera
+    const sicocModal = document.getElementById('sicocModal');
+    if (sicocModal) {
+      sicocModal.addEventListener('click', function(e) {
+        // Solo permitir clic en el contenido del modal, no en el backdrop
+        if (e.target === sicocModal) {
+          e.stopPropagation();
+        }
+      });
+    }
+  });
+
+  // Inicializar eventos en las zonas del SVG
+  function initBodyMap() {
+    document.querySelectorAll('.body-zone').forEach(zone => {
+      zone.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const zoneName = this.dataset.zone;
+        const zoneLabel = this.dataset.label;
+        showTattooTooltip(this, zoneName, zoneLabel);
+      });
+    });
+
+    // Cerrar tooltip al hacer clic fuera
+    document.addEventListener('click', function(e) {
+      if (activeTooltip && 
+          !activeTooltip.contains(e.target) && 
+          !e.target.classList.contains('body-zone') &&
+          !e.target.closest('.tattoo-tooltip-form')) {
+        closeActiveTooltip();
+      }
+    });
+  }
+
+  // Cerrar tooltip activo
+  function closeActiveTooltip() {
+    if (activeTooltip) {
+      activeTooltip.remove();
+      activeTooltip = null;
+    }
+  }
+
+  // Mostrar tooltip de captura cerca de la zona seleccionada
+  function showTattooTooltip(zoneElement, zoneName, zoneLabel) {
+    closeActiveTooltip();
+    
+    const mapContainer = zoneElement.closest('.map-card-body');
+    const containerRect = mapContainer.getBoundingClientRect();
+    const zoneRect = zoneElement.getBoundingClientRect();
+    
+    const tooltipWidth = 300;
+    const tooltipHeight = 450;
+    const margin = 15;
+    
+    const zoneCenterY = zoneRect.top - containerRect.top + zoneRect.height / 2;
+    const zoneCenterX = zoneRect.left - containerRect.left + zoneRect.width / 2;
+    
+    let top, left;
+    let rightSpace = containerRect.right - zoneRect.right;
+    let leftSpace = zoneRect.left - containerRect.left;
+    
+    // Posicionar a la derecha si hay espacio
+    if (rightSpace >= tooltipWidth + margin) {
+      left = (zoneRect.right - containerRect.left) + margin;
+      top = zoneCenterY - tooltipHeight / 2;
+    } else if (leftSpace >= tooltipWidth + margin) {
+      left = (zoneRect.left - containerRect.left) - tooltipWidth - margin;
+      top = zoneCenterY - tooltipHeight / 2;
+    } else {
+      left = zoneCenterX - tooltipWidth / 2;
+      let bottomSpace = containerRect.bottom - zoneRect.bottom;
+      if (bottomSpace >= tooltipHeight + margin) {
+        top = (zoneRect.bottom - containerRect.top) + margin;
+      } else {
+        top = (zoneRect.top - containerRect.top) - tooltipHeight - margin;
+      }
+    }
+    
+    // Asegurar que no se salga del contenedor
+    const maxLeft = containerRect.width - tooltipWidth - 10;
+    const maxTop = containerRect.height - tooltipHeight - 10;
+    left = Math.max(10, Math.min(left, maxLeft));
+    top = Math.max(10, Math.min(top, maxTop));
+    
+    // Verificar si ya existe un tatuaje en esta zona
+    const existingTattoo = tatuajesDetalle.find(t => t.zona === zoneName);
+    
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tattoo-tooltip-form';
+    tooltip.innerHTML = `
+      <div class="tooltip-form-header">
+        <span class="tooltip-zone-name"><i class="fas fa-map-marker-alt"></i> ${zoneLabel || zoneName}</span>
+        <button type="button" class="tooltip-close" onclick="closeActiveTooltip()">&times;</button>
+      </div>
+      <div class="tooltip-form-body">
+        <div class="tooltip-field">
+          <label>Tamaño *</label>
+          <select id="tooltip-tamano" class="tooltip-input">
+            <option value="">Seleccionar</option>
+            <option value="PEQUEÑO" ${existingTattoo?.tamano === 'PEQUEÑO' ? 'selected' : ''}>Pequeño (&lt;10cm)</option>
+            <option value="MEDIANO" ${existingTattoo?.tamano === 'MEDIANO' ? 'selected' : ''}>Mediano (10-20cm)</option>
+            <option value="GRANDE" ${existingTattoo?.tamano === 'GRANDE' ? 'selected' : ''}>Grande (20-40cm)</option>
+            <option value="MUY_GRANDE" ${existingTattoo?.tamano === 'MUY_GRANDE' ? 'selected' : ''}>Muy grande (&gt;40cm)</option>
+          </select>
+        </div>
+        <div class="tooltip-field">
+          <label>Descripción *</label>
+          <textarea id="tooltip-descripcion" class="tooltip-input" rows="2" placeholder="Diseño, colores, forma...">${existingTattoo?.descripcion || ''}</textarea>
+        </div>
+        <div class="tooltip-field">
+          <label>Significado</label>
+          <textarea id="tooltip-significado" class="tooltip-input" rows="2" placeholder="¿Qué significa para usted?">${existingTattoo?.significado || ''}</textarea>
+        </div>
+        <div class="tooltip-field-row">
+          <div class="tooltip-field">
+            <label>Costo</label>
+            <div class="tooltip-input-prefix">
+              <span>$</span>
+              <input type="number" id="tooltip-costo" class="tooltip-input" placeholder="0.00" min="0" step="0.01" value="${existingTattoo?.costo || ''}">
+            </div>
+          </div>
+          <div class="tooltip-field">
+            <label>Año</label>
+            <input type="number" id="tooltip-anio" class="tooltip-input" placeholder="2020" min="1950" max="2030" value="${existingTattoo?.anio || ''}">
+          </div>
+        </div>
+      </div>
+      <div class="tooltip-form-footer">
+        ${existingTattoo ? `
+          <button type="button" class="tooltip-btn-delete" onclick="deleteTattooFromTooltip(${existingTattoo.id_tatuaje_detalle})">
+            <i class="fas fa-trash"></i> Eliminar
+          </button>
+        ` : ''}
+        <button type="button" class="tooltip-btn-cancel" onclick="closeActiveTooltip()">Cancelar</button>
+        <button type="button" class="tooltip-btn-save" onclick="saveTattooFromTooltip('${zoneName}')">
+          <i class="fas fa-check"></i> ${existingTattoo ? 'Actualizar' : 'Guardar'}
+        </button>
+      </div>
+    `;
+    
+    mapContainer.style.position = 'relative';
+    mapContainer.appendChild(tooltip);
+    tooltip.style.top = top + 'px';
+    tooltip.style.left = left + 'px';
+    activeTooltip = tooltip;
+    setTimeout(() => tooltip.classList.add('show'), 10);
+  }
+
+  // Guardar tatuaje desde el tooltip
+  async function saveTattooFromTooltip(zoneName) {
+    const tamano = document.getElementById('tooltip-tamano').value;
+    const descripcion = document.getElementById('tooltip-descripcion').value;
+    const significado = document.getElementById('tooltip-significado').value;
+    const costo = document.getElementById('tooltip-costo').value;
+    const anio = document.getElementById('tooltip-anio').value;
+    
+    if (!tamano || !descripcion) {
+      alert('Por favor llene los campos obligatorios: Tamaño y Descripción');
+      return;
+    }
+    
+    const existingTattoo = tatuajesDetalle.find(t => t.zona === zoneName);
+    
+    const body = {
+      zona: zoneName,
+      tamano,
+      descripcion,
+      significado,
+      costo: costo || null,
+      anio: anio || null
+    };
+    
+    try {
+      let url, method;
+      
+      if (existingTattoo) {
+        url = `/consulta/tatuajes/${existingTattoo.id_tatuaje_detalle}`;
+        method = 'PUT';
+      } else {
+        url = `/consulta/expediente/${id_eval}/tatuajes`;
+        method = 'POST';
+      }
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=tatuajes`;
+      } else {
+        alert(data.error || 'Error al guardar tatuaje');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar tatuaje');
+    }
+  }
+
+  // Eliminar tatuaje desde el tooltip
+  async function deleteTattooFromTooltip(id) {
+    if (!confirm('¿Está seguro de eliminar este tatuaje?')) return;
+    
+    try {
+      const response = await fetch(`/consulta/tatuajes/${id}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=tatuajes`;
+      } else {
+        alert(data.error || 'Error al eliminar tatuaje');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar tatuaje');
+    }
+  }
+
+  // Marcar zonas con tatuajes en los SVGs
+  function markTattooZones() {
+    const zones = document.querySelectorAll('.body-zone');
+    
+    zones.forEach(zone => {
+      const zoneName = zone.getAttribute('data-zone');
+      
+      const hasTattoo = tatuajesDetalle.some(tz => {
+        return tz.zona === zoneName;
+      });
+      
+      if (hasTattoo) {
+        zone.classList.add('has-tattoo');
+      }
+    });
+  }
+
+  // Abrir modal para agregar/editar tatuaje (desde tabla)
+  function openTatuajeModal(tatuaje = null) {
+    const modal = document.getElementById('tatuajeModal');
+    const title = document.getElementById('tatuajeModalTitle');
+
+    if (tatuaje) {
+      title.textContent = 'Editar Tatuaje';
+      document.getElementById('tatuaje_id').value = tatuaje.id_tatuaje_detalle;
+      document.getElementById('tatuaje_zona').value = tatuaje.zona;
+      document.getElementById('tatuaje_tamano').value = tatuaje.tamano || '';
+      document.getElementById('tatuaje_descripcion').value = tatuaje.descripcion || '';
+      document.getElementById('tatuaje_significado').value = tatuaje.significado || '';
+      document.getElementById('tatuaje_costo').value = tatuaje.costo || '';
+      document.getElementById('tatuaje_anio').value = tatuaje.anio || '';
+    } else {
+      title.textContent = 'Agregar Tatuaje';
+      document.getElementById('tatuaje_id').value = '';
+      document.getElementById('tatuaje_zona').value = '';
+      document.getElementById('tatuaje_tamano').value = '';
+      document.getElementById('tatuaje_descripcion').value = '';
+      document.getElementById('tatuaje_significado').value = '';
+      document.getElementById('tatuaje_costo').value = '';
+      document.getElementById('tatuaje_anio').value = '';
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  // Cerrar modal
+  function closeTatuajeModal() {
+    document.getElementById('tatuajeModal').style.display = 'none';
+  }
+
+  // Modal Finalizar
+  function openFinalizarModal() {
+    document.getElementById('finalizarModal').style.display = 'flex';
+  }
+
+  function closeFinalizarModal() {
+    document.getElementById('finalizarModal').style.display = 'none';
+  }
+
+  // Editar tatuaje (desde tabla)
+  function editTatuaje(id) {
+    const tatuaje = tatuajesDetalle.find(t => t.id_tatuaje_detalle === id);
+    if (tatuaje) {
+      openTatuajeModal(tatuaje);
+    }
+  }
+
+  // Eliminar tatuaje (desde tabla)
+  async function deleteTatuaje(id) {
+    if (!confirm('¿Está seguro de eliminar este tatuaje?')) return;
+
+    try {
+      const response = await fetch(`/consulta/tatuajes/${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=tatuajes`;
+      } else {
+        alert(data.error || 'Error al eliminar tatuaje');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar tatuaje');
+    }
+  }
+
+  // Guardar tatuaje (desde modal)
+  async function saveTatuaje() {
+    const id = document.getElementById('tatuaje_id').value;
+    const zona = document.getElementById('tatuaje_zona').value;
+    const tamano = document.getElementById('tatuaje_tamano').value;
+    const descripcion = document.getElementById('tatuaje_descripcion').value;
+    const significado = document.getElementById('tatuaje_significado').value;
+    const costo = document.getElementById('tatuaje_costo').value;
+    const anio = document.getElementById('tatuaje_anio').value;
+
+    if (!zona || !tamano || !descripcion) {
+      alert('Por favor llene los campos obligatorios: Zona, Tamaño y Descripción');
+      return;
+    }
+
+    const body = { zona, tamano, descripcion, significado, costo, anio };
+
+    try {
+      let url, method;
+
+      if (id) {
+        url = `/consulta/tatuajes/${id}`;
+        method = 'PUT';
+      } else {
+        url = `/consulta/expediente/${id_eval}/tatuajes`;
+        method = 'POST';
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=tatuajes`;
+      } else {
+        alert(data.error || 'Error al guardar tatuaje');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar tatuaje');
+    }
+  }
+
+  // Cerrar modales con Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeActiveTooltip();
+      closeTatuajeModal();
+    }
+  });
+
+  // Document handling functions
+  function mostrarFormularioUpload() {
+    document.getElementById('upload-section').style.display = 'block';
+  }
+
+  function previewPDF(input) {
+    const file = input.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Solo se permiten archivos PDF');
+        input.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        alert('El archivo no puede ser mayor a 2MB');
+        input.value = '';
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      document.getElementById('pdfEmbed').src = url;
+      document.getElementById('pdfPreview').style.display = 'block';
+    }
+  }
+
+  function removePreview() {
+    document.getElementById('fileInput').value = '';
+    document.getElementById('pdfPreview').style.display = 'none';
+    document.getElementById('pdfEmbed').src = '';
+  }
+
+  async function subirDocumento() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+      alert('Debe seleccionar un archivo PDF');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const tipoDoc = document.querySelector('[name="tipo_documento"]');
+    if (tipoDoc) {
+      formData.append('tipo_documento', tipoDoc.value);
+    }
+    
+    const observaciones = document.getElementById('docObservaciones');
+    if (observaciones) {
+      formData.append('observaciones', observaciones.value);
+    }
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/documentos`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=documentacion`;
+      } else {
+        alert(data.error || 'Error al subir documento');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al subir documento');
+    }
+  }
+
+  async function eliminarDocumento() {
+    if (!confirm('¿Está seguro de eliminar este documento?')) return;
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/documentos`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        window.location.href = `/consulta/expediente/${id_eval}?tab=documentacion`;
+      } else {
+        alert(data.error || 'Error al eliminar documento');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar documento');
+    }
+  }
+
+  // Drag and drop
+  const dropZone = document.getElementById('dropZone');
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--blue-500)';
+      dropZone.style.background = 'var(--blue-50)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--gray-300)';
+      dropZone.style.background = 'transparent';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--gray-300)';
+      dropZone.style.background = 'transparent';
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        document.getElementById('fileInput').files = e.dataTransfer.files;
+        previewPDF(document.getElementById('fileInput'));
+      }
+    });
+  }
+
+  // Ejecutar comando de formato en editor
+  function execCmd(command) {
+    document.execCommand(command, false, null);
+  }
+
+  // Cargar observaciones en editores
+  function loadObservaciones() {
+    const secciones = ['heredo', 'nopat', 'accidentes', 'patologicos', 'sexual'];
+    secciones.forEach(seccion => {
+      const editor = document.getElementById('obs-' + seccion);
+      if (editor && observaciones[seccion]) {
+        editor.innerHTML = observaciones[seccion];
+      }
+    });
+  }
+
+  // Guardar observación
+  async function saveObservacion(seccion, silent = false) {
+    const editor = document.getElementById('obs-' + seccion);
+    const contenido = editor.innerHTML;
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/observaciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seccion, contenido })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (!silent) showToast('Observación guardada');
+        return { success: true };
+      } else {
+        if (!silent) alert(data.error || 'Error al guardar observación');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar observación');
+      return { success: false };
+    }
+  }
+
+  // Toast notification
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
+  }
+
+  // Funciones de validación condicional
+  function toggleServicios(select) {
+    const container = document.getElementById('especifique-servicios');
+    container.style.display = select.value === 'NO' ? 'block' : 'none';
+  }
+
+  function toggleActividad(select) {
+    const fields = document.querySelectorAll('.actividad-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+  }
+
+  function toggleAccidente(select) {
+    const fields = document.querySelectorAll('.accidente-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      // Limpiar campos cuando se selecciona NO
+      document.getElementById('accidente_anio').value = '';
+      document.getElementById('accidente_empresa').value = '';
+      document.getElementById('accidente_especifique').value = '';
+      document.getElementById('accidente_tratamiento').value = '';
+      document.getElementById('accidente_tratamiento_detalle').value = '';
+      document.getElementById('formato_rt09').value = '';
+      
+      const tratamientoFields = document.querySelectorAll('.tratamiento-fields');
+      tratamientoFields.forEach(field => {
+        field.style.display = 'none';
+      });
+    }
+  }
+
+  function toggleTratamiento(select) {
+    const fields = document.querySelectorAll('.tratamiento-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+  }
+
+  function toggleDroga(select) {
+    const fields = document.querySelectorAll('.droga-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_droga_edad').value = '';
+      document.getElementById('pat_droga_cuales').value = '';
+      document.getElementById('pat_droga_frecuencia').value = '';
+    }
+  }
+
+  function toggleAlcohol(select) {
+    const fields = document.querySelectorAll('.alcohol-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_alcohol_edad').value = '';
+      document.getElementById('pat_alcohol_tipo').value = '';
+      document.getElementById('pat_alcohol_cantidad').value = '';
+    }
+  }
+
+  function toggleFracturas(select) {
+    const fields = document.querySelectorAll('.fracturas-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_fracturas_especifique').value = '';
+    }
+  }
+
+  function toggleTatuajes(select) {
+    const content = document.getElementById('tatuajesContent');
+    const btnAgregar = document.getElementById('btnAgregarTatuaje');
+    
+    if (select.value === 'SI') {
+      content.style.display = 'block';
+      btnAgregar.style.display = 'inline-flex';
+    } else {
+      content.style.display = 'none';
+      btnAgregar.style.display = 'none';
+      // Limpiar campos si selecciona NO
+      document.getElementById('obs-tatuajes').innerHTML = '';
+    }
+    
+    // Guardar el valor en la base de datos
+    saveTieneTatuaje(select.value);
+  }
+
+  async function saveTieneTatuaje(valor) {
+    try {
+      await fetch(`/consulta/expediente/${id_eval}/tatuajes/tiene`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tiene_tatuaje: valor })
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+  async function saveTatuajeObservaciones() {
+    const contenido = document.getElementById('obs-tatuajes').innerHTML;
+    
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/tatuajes/observaciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ observaciones: contenido })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Observaciones de tatuajes guardadas');
+      } else {
+        alert(result.error || 'Error al guardar observaciones');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar observaciones');
+    }
+  }
+
+  function toggleEnfermedad(select) {
+    const fields = document.querySelectorAll('.enfermedad-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_enfermedad_tiempo').value = '';
+      document.getElementById('pat_enfermedad_descripcion').value = '';
+    }
+  }
+
+  function toggleMedicamentos(select) {
+    const fields = document.querySelectorAll('.medicamentos-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_medicamentos_descripcion').value = '';
+    }
+  }
+
+  function toggleAlergias(select) {
+    const fields = document.querySelectorAll('.alergias-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('pat_alergias_descripcion').value = '';
+    }
+  }
+
+  function toggleAntecedentePat(checkbox) {
+    const field = checkbox.dataset.field;
+    const obsDiv = document.querySelector(`.ant-pat-obs[data-field="${field}_obs"]`);
+    
+    console.log('Toggle antecedente:', field, checkbox.checked, obsDiv);
+    
+    if (obsDiv) {
+      if (checkbox.checked) {
+        obsDiv.style.display = 'block';
+      } else {
+        obsDiv.style.display = 'none';
+        const editor = obsDiv.querySelector('.obs-editor');
+        if (editor) editor.innerHTML = '';
+      }
+    }
+    
+    // Si marca alguna opción, desmarcar "Ninguno"
+    if (checkbox.checked) {
+      const ningunoCheck = document.querySelector('.ant-pat-check[data-field="ant_ninguno"]');
+      if (ningunoCheck) ningunoCheck.checked = false;
+    }
+  }
+
+  function toggleAntecedenteNinguno(checkbox) {
+    if (checkbox.checked) {
+      // Desmarcar todas las demás opciones y ocultar sus textareas
+      document.querySelectorAll('.ant-pat-check:not([data-field="ant_ninguno"])').forEach(check => {
+        check.checked = false;
+        const field = check.dataset.field;
+        const obsDiv = document.querySelector(`.ant-pat-obs[data-field="${field}_obs"]`);
+        if (obsDiv) {
+          obsDiv.style.display = 'none';
+          const editor = obsDiv.querySelector('.obs-editor');
+          if (editor) editor.innerHTML = '';
+        }
+      });
+    }
+  }
+
+  function toggleETS(select) {
+    const fields = document.querySelectorAll('.ets-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('sexual_ets_especifique').value = '';
+    }
+  }
+
+  function toggleAnticonceptivo(select) {
+    const fields = document.querySelectorAll('.anticonceptivo-fields');
+    fields.forEach(field => {
+      field.style.display = select.value === 'SI' ? 'block' : 'none';
+    });
+    if (select.value !== 'SI') {
+      document.getElementById('sexual_anticonceptivo_especifique').value = '';
+    }
+  }
+
+  // Guardar Datos Generales
+  async function saveDatosGenerales() {
+    const rfc = document.getElementById('dg_rfc').value;
+    const genero = document.getElementById('dg_genero').value;
+    const edad = document.getElementById('dg_edad').value;
+    const fecha_nacimiento = document.getElementById('dg_fecha_nacimiento').value;
+    const estado_civil = document.getElementById('dg_estado_civil').value;
+    const escolaridad = document.getElementById('dg_escolaridad').value;
+    const telefono_celular = document.getElementById('dg_telefono_celular').value;
+
+    if (!genero) {
+      alert('Género es obligatorio');
+      return;
+    }
+
+    const data = {
+      rfc,
+      genero,
+      edad,
+      fecha_nacimiento,
+      estado_civil,
+      escolaridad,
+      telefono_celular
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/datos-generales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Datos generales guardados');
+      } else {
+        alert(result.error || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar');
+    }
+  }
+
+  // Guardar Heredo Familiares
+  async function saveHeredo(silent = false) {
+    const data = {};
+    document.querySelectorAll('.heredo-checkbox').forEach(cb => {
+      data[cb.dataset.field] = cb.checked ? 1 : 0;
+    });
+    data.enf_otros_detalle = document.getElementById('enf_otros_detalle').value;
+
+    // Determinar si hay OTROS (alguno de los checkboxes marcados o texto en detalle)
+    const tieneOtros = data.enf_otros_padre || data.enf_otros_madre || data.enf_otros_abuelos || (data.enf_otros_detalle && data.enf_otros_detalle.trim() !== '');
+    data.enf_otros = tieneOtros ? 1 : 0;
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/antecedentes/heredo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (!silent) showToast('Heredo familiares guardado');
+        return { success: true };
+      } else {
+        if (!silent) alert(result.error || 'Error al guardar');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar');
+      return { success: false };
+    }
+  }
+
+  // Guardar No Patológicos
+  async function saveNoPat(silent = false) {
+    const tipo_domicilio = document.getElementById('nopat_tipo_domicilio').value;
+    const cuenta_servicios = document.getElementById('nopat_cuenta_servicios').value;
+    const cambio_ropa = document.getElementById('nopat_cambio_ropa').value;
+    const bano_diario = document.getElementById('nopat_bano_diario').value;
+    const ingesta_agua = document.getElementById('nopat_ingesta_agua').value;
+    const actividad_fisica = document.getElementById('nopat_actividad_fisica').value;
+
+    // Validar campos obligatorios
+    if (!tipo_domicilio || !cuenta_servicios || !cambio_ropa || !bano_diario || !ingesta_agua || !actividad_fisica) {
+      if (!silent) alert('Todos los campos son obligatorios');
+      return { success: false };
+    }
+
+    // Validar campos condicionales
+    if (cuenta_servicios === 'NO' && !document.getElementById('nopat_especifique_servicios').value) {
+      if (!silent) alert('Debe especificar los servicios faltantes');
+      return { success: false };
+    }
+    if (actividad_fisica === 'SI') {
+      if (!document.getElementById('nopat_veces_semana').value || !document.getElementById('nopat_tipo_actividad').value) {
+        if (!silent) alert('Debe completar los campos de actividad física');
+        return { success: false };
+      }
+    }
+
+    const data = {
+      tipo_domicilio,
+      cuenta_servicios,
+      especifique_servicios: document.getElementById('nopat_especifique_servicios').value,
+      cambio_ropa,
+      bano_diario,
+      ingesta_agua,
+      actividad_fisica,
+      veces_semana: document.getElementById('nopat_veces_semana').value,
+      tipo_actividad: document.getElementById('nopat_tipo_actividad').value,
+      horas_sueno: document.getElementById('nopat_horas_sueno').value
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/antecedentes/nopat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (!silent) showToast('No patológicos guardado');
+        return { success: true };
+      } else {
+        if (!silent) alert(result.error || 'Error al guardar');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar');
+      return { success: false };
+    }
+  }
+
+  // Guardar Accidentes
+  async function saveAccidentes(silent = false) {
+    const accidente_laboral = document.getElementById('accidente_laboral').value;
+
+    // Validar campo obligatorio
+    if (!accidente_laboral) {
+      if (!silent) alert('El campo ¿Ha tenido accidentes laborales? es obligatorio');
+      return { success: false };
+    }
+
+    // Validar campos condicionales solo si accidente_laboral es SI
+    if (accidente_laboral === 'SI') {
+      const accidente_anio = document.getElementById('accidente_anio').value;
+      const accidente_empresa = document.getElementById('accidente_empresa').value;
+      const accidente_especifique = document.getElementById('accidente_especifique').value;
+      const accidente_tratamiento = document.getElementById('accidente_tratamiento').value;
+      const formato_rt09 = document.getElementById('formato_rt09').value;
+      
+      if (!accidente_anio || !accidente_empresa || !accidente_especifique || !accidente_tratamiento || !formato_rt09) {
+        if (!silent) alert('Debe completar todos los campos del accidente');
+        return { success: false };
+      }
+
+      if (accidente_tratamiento === 'SI' && !document.getElementById('accidente_tratamiento_detalle').value) {
+        if (!silent) alert('Debe especificar el tratamiento');
+        return { success: false };
+      }
+    }
+
+    const data = {
+      accidente_laboral,
+      accidente_anio: document.getElementById('accidente_anio').value,
+      accidente_empresa: document.getElementById('accidente_empresa').value,
+      accidente_especifique: document.getElementById('accidente_especifique').value,
+      accidente_tratamiento: document.getElementById('accidente_tratamiento').value,
+      accidente_tratamiento_detalle: document.getElementById('accidente_tratamiento_detalle').value,
+      formato_rt09: document.getElementById('formato_rt09').value
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/antecedentes/accidentes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (!silent) showToast('Accidentes guardado');
+        return { success: true };
+      } else {
+        if (!silent) alert(result.error || 'Error al guardar');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar');
+      return { success: false };
+    }
+  }
+
+  // Guardar Patológicos
+  async function savePatologicos(silent = false) {
+    const consumo_droga = document.getElementById('pat_consumo_droga').value;
+    const consumo_alcohol = document.getElementById('pat_consumo_alcohol').value;
+    const antecedente_fracturas = document.getElementById('pat_antecedente_fracturas').value;
+    const enfermedad_actual = document.getElementById('pat_enfermedad_actual').value;
+
+    // Validar campos obligatorios
+    if (!consumo_droga || !consumo_alcohol || !antecedente_fracturas || !enfermedad_actual) {
+      if (!silent) alert('Los campos de consumo de drogas, alcohol, fracturas y enfermedad actual son obligatorios');
+      return { success: false };
+    }
+
+    // Validar campos condicionales solo si el select es SI
+    if (consumo_droga === 'SI') {
+      if (!document.getElementById('pat_droga_edad').value || !document.getElementById('pat_droga_cuales').value || !document.getElementById('pat_droga_frecuencia').value) {
+        if (!silent) alert('Debe completar todos los campos de drogas');
+        return { success: false };
+      }
+    }
+    if (consumo_alcohol === 'SI') {
+      if (!document.getElementById('pat_alcohol_edad').value || !document.getElementById('pat_alcohol_tipo').value || !document.getElementById('pat_alcohol_cantidad').value) {
+        if (!silent) alert('Debe completar todos los campos de alcohol');
+        return { success: false };
+      }
+    }
+    if (antecedente_fracturas === 'SI' && !document.getElementById('pat_fracturas_especifique').value) {
+      if (!silent) alert('Debe especificar las fracturas');
+      return { success: false };
+    }
+    if (enfermedad_actual === 'SI') {
+      if (!document.getElementById('pat_enfermedad_tiempo').value || !document.getElementById('pat_enfermedad_descripcion').value) {
+        if (!silent) alert('Debe completar todos los campos de enfermedad actual');
+        return { success: false };
+      }
+    }
+
+    const data = {
+      consumo_droga,
+      droga_edad: document.getElementById('pat_droga_edad').value,
+      droga_cuales: document.getElementById('pat_droga_cuales').value,
+      droga_frecuencia: document.getElementById('pat_droga_frecuencia').value,
+      consumo_alcohol,
+      alcohol_edad: document.getElementById('pat_alcohol_edad').value,
+      alcohol_tipo: document.getElementById('pat_alcohol_tipo').value,
+      alcohol_cantidad: document.getElementById('pat_alcohol_cantidad').value,
+      antecedente_fracturas,
+      fracturas_especifique: document.getElementById('pat_fracturas_especifique').value,
+      enfermedad_actual,
+      enfermedad_tiempo: document.getElementById('pat_enfermedad_tiempo').value,
+      enfermedad_descripcion: document.getElementById('pat_enfermedad_descripcion').value,
+      consume_medicamentos: document.getElementById('pat_consume_medicamentos').value,
+      medicamentos_descripcion: document.getElementById('pat_medicamentos_descripcion').value,
+      tiene_alergias: document.getElementById('pat_tiene_alergias').value,
+      alergias_descripcion: document.getElementById('pat_alergias_descripcion').value,
+      ant_traumatologico: document.querySelector('.ant-pat-check[data-field="ant_traumatologico"]').checked ? 1 : 0,
+      ant_traumatologico_obs: document.getElementById('ant_traumatologico_obs').innerHTML,
+      ant_medicamentos_controlados: document.querySelector('.ant-pat-check[data-field="ant_medicamentos_controlados"]').checked ? 1 : 0,
+      ant_medicamentos_controlados_obs: document.getElementById('ant_medicamentos_controlados_obs').innerHTML,
+      ant_cardiorespiratorias: document.querySelector('.ant-pat-check[data-field="ant_cardiorespiratorias"]').checked ? 1 : 0,
+      ant_cardiorespiratorias_obs: document.getElementById('ant_cardiorespiratorias_obs').innerHTML,
+      ant_endocrinologicas: document.querySelector('.ant-pat-check[data-field="ant_endocrinologicas"]').checked ? 1 : 0,
+      ant_endocrinologicas_obs: document.getElementById('ant_endocrinologicas_obs').innerHTML,
+      ant_musculo_esqueleticas: document.querySelector('.ant-pat-check[data-field="ant_musculo_esqueleticas"]').checked ? 1 : 0,
+      ant_musculo_esqueleticas_obs: document.getElementById('ant_musculo_esqueleticas_obs').innerHTML,
+      ant_otros: document.querySelector('.ant-pat-check[data-field="ant_otros"]').checked ? 1 : 0,
+      ant_otros_obs: document.getElementById('ant_otros_obs').innerHTML,
+      ant_ninguno: document.querySelector('.ant-pat-check[data-field="ant_ninguno"]').checked ? 1 : 0
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/antecedentes/patologicos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (!silent) showToast('Patológicos guardado');
+        return { success: true };
+      } else {
+        if (!silent) alert(result.error || 'Error al guardar');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar');
+      return { success: false };
+    }
+  }
+
+  // Guardar Salud Sexual
+  async function saveSexual(silent = false) {
+    const edad_inicio_sexual = document.getElementById('sexual_edad_inicio_sexual').value;
+    const num_parejas = document.getElementById('sexual_num_parejas').value;
+    const ets = document.getElementById('sexual_ets').value;
+    const anticonceptivo = document.getElementById('sexual_anticonceptivo').value;
+
+    // Validar campos obligatorios
+    if (!edad_inicio_sexual || !num_parejas || !ets || !anticonceptivo) {
+      if (!silent) alert('Los campos de inicio sexual, parejas, ETS y anticonceptivo son obligatorios');
+      return { success: false };
+    }
+
+    // Validar campos condicionales solo si el select es SI
+    if (ets === 'SI' && !document.getElementById('sexual_ets_especifique').value) {
+      if (!silent) alert('Debe especificar la ETS');
+      return { success: false };
+    }
+    if (anticonceptivo === 'SI' && !document.getElementById('sexual_anticonceptivo_especifique').value) {
+      if (!silent) alert('Debe especificar el método anticonceptivo');
+      return { success: false };
+    }
+
+    const data = {
+      edad_inicio_sexual,
+      num_parejas,
+      ets,
+      ets_especifique: document.getElementById('sexual_ets_especifique').value,
+      anticonceptivo,
+      anticonceptivo_especifique: document.getElementById('sexual_anticonceptivo_especifique').value,
+      ultima_menstruacion: document.getElementById('sexual_ultima_menstruacion')?.value || null,
+      frecuencia_menstrual: document.getElementById('sexual_frecuencia_menstrual')?.value || null,
+      num_partos: document.getElementById('sexual_num_partos')?.value || null,
+      num_cesareas: document.getElementById('sexual_num_cesareas')?.value || null,
+      num_abortos: document.getElementById('sexual_num_abortos')?.value || null,
+      observaciones_sexual: document.getElementById('sexual_observaciones_sexual').value
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/antecedentes/sexual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (!silent) showToast('Salud sexual guardado');
+        return { success: true };
+      } else {
+        if (!silent) alert(result.error || 'Error al guardar');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (!silent) alert('Error al guardar');
+      return { success: false };
+    }
+  }
+
+  // Guardar todos los antecedentes
+  async function saveAllAntecedentes() {
+    const btn = document.getElementById('btnSaveAllAntecedentes');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    
+    const secciones = [
+      { name: 'Heredo Familiares', fn: () => saveHeredo(true) },
+      { name: 'No Patológicos', fn: () => saveNoPat(true) },
+      { name: 'Accidentes', fn: () => saveAccidentes(true) },
+      { name: 'Patológicos', fn: () => savePatologicos(true) },
+      { name: 'Salud Sexual', fn: () => saveSexual(true) },
+      { name: 'Obs. Heredo', fn: () => saveObservacion('heredo', true) },
+      { name: 'Obs. No Patológicos', fn: () => saveObservacion('nopat', true) },
+      { name: 'Obs. Accidentes', fn: () => saveObservacion('accidentes', true) },
+      { name: 'Obs. Patológicos', fn: () => saveObservacion('patologicos', true) },
+      { name: 'Obs. Sexual', fn: () => saveObservacion('sexual', true) }
+    ];
+    
+    const errores = [];
+    
+    for (const seccion of secciones) {
+      try {
+        const result = await seccion.fn();
+        if (result && !result.success) {
+          errores.push(seccion.name);
+        }
+      } catch (error) {
+        console.error(`Error en ${seccion.name}:`, error);
+        errores.push(seccion.name);
+      }
+    }
+    
+    if (errores.length > 0) {
+      alert(`Error al guardar: ${errores.join(', ')}. Revise los datos e intente de nuevo.`);
+    } else {
+      showToast('Todos los antecedentes guardados correctamente');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Guardar Antecedentes';
+  }
+
+  // Exploración Física - Toggle checkboxes
+  function toggleExploracion(checkbox) {
+    const campo = checkbox.dataset.campo;
+    const group = document.getElementById('group-' + campo);
+    const sinDatosCheck = document.querySelector('[data-campo="sin_datos"]');
+    
+    if (checkbox.checked) {
+      // Desmarcar "Sin datos de relevancia"
+      sinDatosCheck.checked = false;
+      document.getElementById('group-sin_datos').style.display = 'none';
+      // Mostrar textarea
+      group.style.display = 'block';
+    } else {
+      group.style.display = 'none';
+    }
+  }
+
+  function toggleSinDatos(checkbox) {
+    const otherChecks = document.querySelectorAll('.exploracion-check:not([data-campo="sin_datos"])');
+    const allGroups = document.querySelectorAll('.exploracion-group');
+    
+    if (checkbox.checked) {
+      // Desmarcar todas las otras opciones
+      otherChecks.forEach(cb => {
+        cb.checked = false;
+      });
+      // Ocultar todos los textareas excepto "sin datos"
+      allGroups.forEach(g => {
+        g.style.display = 'none';
+      });
+      // Mostrar textarea "sin datos" con texto predefinido
+      document.getElementById('group-sin_datos').style.display = 'block';
+      const editor = document.getElementById('exp-sin_datos');
+      if (!editor.innerHTML.trim() || editor.innerHTML === '<br>') {
+        editor.innerHTML = 'Sin datos de relevancia';
+      }
+    } else {
+      document.getElementById('group-sin_datos').style.display = 'none';
+    }
+  }
+
+  // Rich text commands for exploracion editors
+  function execCmdExploracion(campo, command) {
+    const editor = document.getElementById('exp-' + campo);
+    editor.focus();
+    document.execCommand(command, false, null);
+  }
+
+  // Rich text commands for habitus exterior
+  function execCmdHabitus(command) {
+    const editor = document.getElementById('exp-habitus_exterior');
+    editor.focus();
+    document.execCommand(command, false, null);
+  }
+
+  // Rich text commands for estado nutricional
+  function execCmdEstadoNutricional(command) {
+    const editor = document.getElementById('soma_estado_nutricional');
+    editor.focus();
+    document.execCommand(command, false, null);
+  }
+
+  // Guardar Exploración Física
+  async function saveExploracionFisica() {
+    const checks = document.querySelectorAll('.exploracion-check');
+    const data = {};
+    
+    checks.forEach(cb => {
+      data[cb.dataset.campo] = cb.checked ? 1 : 0;
+    });
+
+    // Obtener contenido de los editores
+    const editores = ['cardiorespiratorio', 'endocrino', 'osteomuscular', 'neuropsiquiatrico', 'otros', 'sin_datos'];
+    editores.forEach(campo => {
+      const editor = document.getElementById('exp-' + campo);
+      if (editor) {
+        data[campo + '_obs'] = editor.innerHTML;
+      }
+    });
+
+    // Obtener habitus exterior
+    const habitusEditor = document.getElementById('exp-habitus_exterior');
+    if (habitusEditor) {
+      data.habitus_exterior = habitusEditor.innerHTML;
+    }
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/exploracion-fisica`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Exploración física guardada');
+      } else {
+        alert(result.error || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar');
+    }
+  }
+
+  // Cargar datos de exploración física
+  function loadExploracionFisica() {
+    fetch(`/consulta/expediente/${id_eval}/exploracion-fisica`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.id_exploracion_fisica) {
+          // Marcar checkboxes
+          const campos = ['cardiorespiratorio', 'endocrino', 'osteomuscular', 'neuropsiquiatrico', 'otros', 'sin_datos'];
+          campos.forEach(campo => {
+            const check = document.querySelector(`[data-campo="${campo}"]`);
+            if (check && data[campo]) {
+              check.checked = true;
+              const group = document.getElementById('group-' + campo);
+              if (group) {
+                group.style.display = 'block';
+              }
+            }
+          });
+
+          // Cargar contenido de editores
+          campos.forEach(campo => {
+            const editor = document.getElementById('exp-' + campo);
+            if (editor && data[campo + '_obs']) {
+              editor.innerHTML = data[campo + '_obs'];
+            }
+          });
+
+          // Cargar habitus exterior
+          const habitusEditor = document.getElementById('exp-habitus_exterior');
+          if (habitusEditor && data.habitus_exterior) {
+            habitusEditor.innerHTML = data.habitus_exterior;
+          }
+        }
+      })
+      .catch(err => console.error('Error cargando exploración física:', err));
+  }
+
+  // Toggle Ishihara detalle
+  function toggleIshihara(select) {
+    const detalleGroup = document.getElementById('ishihara-detalle-group');
+    if (select.value === 'POSITIVO') {
+      detalleGroup.style.display = 'block';
+    } else {
+      detalleGroup.style.display = 'none';
+      document.getElementById('av_ishihara_detalle').innerHTML = '';
+    }
+  }
+
+  // Rich text commands for Ishihara
+  function execCmdIshihara(command) {
+    const editor = document.getElementById('av_ishihara_detalle');
+    editor.focus();
+    document.execCommand(command, false, null);
+  }
+
+  // Rich text commands for Exploracion, Sintesis, LOC
+  function execCmdExploracionAV(campo, command) {
+    const editor = document.getElementById('av_' + campo);
+    editor.focus();
+    document.execCommand(command, false, null);
+  }
+
+  // Toggle LOC detalle
+  function toggleLOC(checkbox) {
+    const detalleGroup = document.getElementById('loc-detalle-group');
+    if (checkbox.checked) {
+      detalleGroup.style.display = 'block';
+    } else {
+      detalleGroup.style.display = 'none';
+      document.getElementById('av_loc_detalle').innerHTML = '';
+      document.getElementById('av_loc_num_evaluacion').value = '';
+    }
+  }
+
+  // Somatometría - Calcular IMC
+  function calcularIMC() {
+    const peso = parseFloat(document.getElementById('soma_peso').value);
+    const talla = parseFloat(document.getElementById('soma_talla').value);
+    const imcInput = document.getElementById('soma_imc');
+    const indicator = document.getElementById('imc-indicator');
+
+    if (peso > 0 && talla > 0) {
+      const imc = peso / (talla * talla);
+      imcInput.value = imc.toFixed(2);
+      
+      // Mostrar indicador
+      indicator.style.display = 'block';
+      
+      // Determinar categoría según matriz de clasificación
+      let category, description, icon, color, bgColor;
+      if (imc < 18.5) {
+        category = 'Peso bajo';
+        description = 'IMC menor a 18.5';
+        icon = '⚠️';
+        color = 'var(--warning)';
+        bgColor = 'var(--yellow-50)';
+      } else if (imc < 25) {
+        category = 'Peso normal';
+        description = 'IMC entre 18.5 y 24.99';
+        icon = '✅';
+        color = 'var(--success)';
+        bgColor = 'var(--green-50)';
+      } else if (imc < 30) {
+        category = 'Sobrepeso';
+        description = 'IMC entre 25 y 29.99';
+        icon = '⚠️';
+        color = 'var(--warning)';
+        bgColor = 'var(--yellow-50)';
+      } else if (imc < 35) {
+        category = 'Obesidad grado I';
+        description = 'IMC entre 30 y 34.99';
+        icon = '🔴';
+        color = 'var(--danger)';
+        bgColor = 'var(--red-50)';
+      } else if (imc < 40) {
+        category = 'Obesidad grado II';
+        description = 'IMC entre 35 y 39.99';
+        icon = '🔴';
+        color = 'var(--danger)';
+        bgColor = 'var(--red-50)';
+      } else {
+        category = 'Obesidad grado III';
+        description = 'IMC 40 o más';
+        icon = '🔴';
+        color = 'var(--danger)';
+        bgColor = 'var(--red-50)';
+      }
+
+      document.getElementById('imc-icon').textContent = icon;
+      document.getElementById('imc-category').textContent = category;
+      document.getElementById('imc-category').style.color = color;
+      document.getElementById('imc-description').textContent = description;
+      indicator.style.background = bgColor;
+      indicator.style.borderLeft = `4px solid ${color}`;
+    } else {
+      imcInput.value = '';
+      indicator.style.display = 'none';
+    }
+  }
+
+  // Guardar Somatometría
+  async function saveSomatometria() {
+    const peso = document.getElementById('soma_peso').value;
+    const talla = document.getElementById('soma_talla').value;
+    const imc = document.getElementById('soma_imc').value;
+    const estadoNutricionalEditor = document.getElementById('soma_estado_nutricional');
+    const presionArterial = document.getElementById('soma_presion_arterial').value;
+    const frecuenciaCardiaca = document.getElementById('soma_frecuencia_cardiaca').value;
+    const frecuenciaRespiratoria = document.getElementById('soma_frecuencia_respiratoria').value;
+
+    if (!peso || !talla) {
+      alert('Peso y Talla son obligatorios');
+      return;
+    }
+
+    const locChecked = document.getElementById('av_loc').checked;
+    const locNumEvaluacion = document.getElementById('av_loc_num_evaluacion').value;
+
+    if (locChecked && !locNumEvaluacion) {
+      alert('El Número de Evaluación LOC es obligatorio cuando LOC está habilitado');
+      document.getElementById('av_loc_num_evaluacion').focus();
+      return;
+    }
+
+    const data = {
+      peso,
+      talla,
+      imc: imc || null,
+      estado_nutricional: estadoNutricionalEditor ? estadoNutricionalEditor.innerHTML : null,
+      presion_arterial: presionArterial || null,
+      frecuencia_cardiaca: frecuenciaCardiaca || null,
+      frecuencia_respiratoria: frecuenciaRespiratoria || null,
+      od_sin_correccion: document.getElementById('av_od_sin_correccion').value || null,
+      od_con_correccion: document.getElementById('av_od_con_correccion').value || null,
+      od_estenopeico: document.getElementById('av_od_estenopeico').value || null,
+      oi_sin_correccion: document.getElementById('av_oi_sin_correccion').value || null,
+      oi_con_correccion: document.getElementById('av_oi_con_correccion').value || null,
+      oi_estenopeico: document.getElementById('av_oi_estenopeico').value || null,
+      ishihara: document.getElementById('av_ishihara').value || null,
+      ishihara_detalle: document.getElementById('av_ishihara_detalle').innerHTML || null,
+      exploracion: document.getElementById('av_exploracion').innerHTML || null,
+      sintesis_tecnica: document.getElementById('av_sintesis_tecnica').innerHTML || null,
+      sintesis_resultado: document.getElementById('av_sintesis_resultado').value || null,
+      loc: document.getElementById('av_loc').checked ? 1 : 0,
+      loc_detalle: document.getElementById('av_loc_detalle').innerHTML || null,
+      loc_resultado: document.getElementById('av_loc_resultado').value || null,
+      loc_num_evaluacion: locChecked ? (locNumEvaluacion || null) : null
+    };
+
+    try {
+      const response = await fetch(`/consulta/expediente/${id_eval}/somatometria`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Somatometría guardada');
+      } else {
+        alert(result.error || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar');
+    }
+  }
+
+  // Cargar datos de somatometría
+  function loadSomatometria() {
+    fetch(`/consulta/expediente/${id_eval}/somatometria`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.id_somatometria) {
+          document.getElementById('soma_peso').value = data.peso || '';
+          document.getElementById('soma_talla').value = data.talla || '';
+          if (data.peso && data.talla) {
+            calcularIMC();
+          }
+          // Cargar estado nutricional
+          const estadoNutricionalEditor = document.getElementById('soma_estado_nutricional');
+          if (estadoNutricionalEditor && data.estado_nutricional) {
+            estadoNutricionalEditor.innerHTML = data.estado_nutricional;
+          }
+          // Cargar signos vitales
+          document.getElementById('soma_presion_arterial').value = data.presion_arterial || '';
+          document.getElementById('soma_frecuencia_cardiaca').value = data.frecuencia_cardiaca || '';
+          document.getElementById('soma_frecuencia_respiratoria').value = data.frecuencia_respiratoria || '';
+          // Cargar agudeza visual
+          document.getElementById('av_od_sin_correccion').value = data.od_sin_correccion || '';
+          document.getElementById('av_od_con_correccion').value = data.od_con_correccion || '';
+          document.getElementById('av_od_estenopeico').value = data.od_estenopeico || '';
+          document.getElementById('av_oi_sin_correccion').value = data.oi_sin_correccion || '';
+          document.getElementById('av_oi_con_correccion').value = data.oi_con_correccion || '';
+          document.getElementById('av_oi_estenopeico').value = data.oi_estenopeico || '';
+          // Cargar ishihara
+          document.getElementById('av_ishihara').value = data.ishihara || '';
+          if (data.ishihara === 'POSITIVO') {
+            document.getElementById('ishihara-detalle-group').style.display = 'block';
+            document.getElementById('av_ishihara_detalle').innerHTML = data.ishihara_detalle || '';
+          }
+          // Cargar exploración, síntesis, LOC
+          document.getElementById('av_exploracion').innerHTML = data.exploracion || '';
+          document.getElementById('av_sintesis_tecnica').innerHTML = data.sintesis_tecnica || '';
+          document.getElementById('av_sintesis_resultado').value = data.sintesis_resultado || '';
+          if (data.loc) {
+            document.getElementById('av_loc').checked = true;
+            document.getElementById('loc-detalle-group').style.display = 'block';
+            document.getElementById('av_loc_detalle').innerHTML = data.loc_detalle || '';
+            document.getElementById('av_loc_resultado').value = data.loc_resultado || '';
+            document.getElementById('av_loc_num_evaluacion').value = data.loc_num_evaluacion || '';
+          }
+        }
+      })
+      .catch(err => console.error('Error cargando somatometría:', err));
+  }
+</script>
+
+<!-- Modal Tatuaje (para agregar desde tabla) -->
+<div id="tatuajeModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 id="tatuajeModalTitle"><i class="fas fa-paint-brush"></i> Agregar Tatuaje</h3>
+      <button type="button" class="modal-close" onclick="closeTatuajeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tatuaje_id">
+      <div class="form-group">
+        <label for="tatuaje_zona">Zona del cuerpo *</label>
+        <select id="tatuaje_zona" required>
+          <option value="">Seleccionar zona</option>
+          <optgroup label="FRONTAL">
+            <option value="region_facial_derecha">Región facial derecha</option>
+            <option value="region_facial_izquierda">Región facial izquierda</option>
+            <option value="cuello_derecho">Cuello derecho</option>
+            <option value="cuello_izquierdo">Cuello izquierdo</option>
+            <option value="pectoral_derecho">Pectoral derecho</option>
+            <option value="pectoral_izquierdo">Pectoral izquierdo</option>
+            <option value="region_costal_derecha">Región costal derecha</option>
+            <option value="region_costal_izquierda">Región costal izquierda</option>
+            <option value="abdomen_derecho">Abdomen lado derecho</option>
+            <option value="abdomen_izquierdo">Abdomen lado izquierdo</option>
+            <option value="region_suprapubica">Región suprapúbica</option>
+            <option value="region_deltoidea_derecha">Región deltoidea derecha</option>
+            <option value="region_deltoidea_izquierda">Región deltoidea izquierda</option>
+            <option value="brazo_derecho">Brazo derecho</option>
+            <option value="brazo_izquierdo">Brazo izquierdo</option>
+            <option value="antebrazo_derecho">Antebrazo derecho</option>
+            <option value="antebrazo_izquierdo">Antebrazo izquierdo</option>
+            <option value="palma_derecha">Palma derecha</option>
+            <option value="palma_izquierda">Palma izquierda</option>
+            <option value="region_coxal_derecha">Región coxal derecha</option>
+            <option value="region_coxal_izquierda">Región coxal izquierda</option>
+            <option value="muslo_derecho">Muslo derecho</option>
+            <option value="muslo_izquierdo">Muslo izquierdo</option>
+            <option value="rodilla_derecha">Rodilla derecha</option>
+            <option value="rodilla_izquierda">Rodilla izquierda</option>
+            <option value="pierna_derecha">Pierna derecha</option>
+            <option value="pierna_izquierda">Pierna izquierda</option>
+            <option value="tobillo_derecho">Tobillo derecho</option>
+            <option value="tobillo_izquierdo">Tobillo izquierdo</option>
+            <option value="dorso_pie_derecho">Dorso del pie derecho</option>
+            <option value="dorso_pie_izquierdo">Dorso del pie izquierdo</option>
+          </optgroup>
+          <optgroup label="POSTERIOR">
+            <option value="region_occipital_izquierda">Región occipital izquierda</option>
+            <option value="region_occipital_derecha">Región occipital derecha</option>
+            <option value="cuello_post_izquierdo">Cuello izquierdo (posterior)</option>
+            <option value="cuello_post_derecho">Cuello derecho (posterior)</option>
+            <option value="region_escapular_izquierda">Región escapular izquierda</option>
+            <option value="region_escapular_derecha">Región escapular derecha</option>
+            <option value="brazo_post_izquierdo">Brazo izquierdo (posterior)</option>
+            <option value="brazo_post_derecho">Brazo derecho (posterior)</option>
+            <option value="antebrazo_post_izquierdo">Antebrazo izquierdo (posterior)</option>
+            <option value="antebrazo_post_derecho">Antebrazo derecho (posterior)</option>
+            <option value="dorso_mano_izquierda">Dorso mano izquierda</option>
+            <option value="dorso_mano_derecha">Dorso mano derecha</option>
+            <option value="region_dorsal_izquierda">Región dorsal izquierda</option>
+            <option value="region_dorsal_derecha">Región dorsal derecha</option>
+            <option value="region_lumbar">Región lumbar</option>
+            <option value="region_glutea_izquierda">Región glútea izquierda</option>
+            <option value="region_glutea_derecha">Región glútea derecha</option>
+            <option value="muslo_post_izquierdo">Muslo izquierdo (posterior)</option>
+            <option value="muslo_post_derecho">Muslo derecho (posterior)</option>
+            <option value="region_poplitea_izquierda">Región poplítea izquierda</option>
+            <option value="region_poplitea_derecha">Región poplítea derecha</option>
+            <option value="pierna_post_izquierda">Pierna izquierda (posterior)</option>
+            <option value="pierna_post_derecha">Pierna derecha (posterior)</option>
+            <option value="tobillo_post_izquierdo">Tobillo izquierdo (posterior)</option>
+            <option value="tobillo_post_derecho">Tobillo derecho (posterior)</option>
+            <option value="talon_izquierdo">Talón izquierdo</option>
+            <option value="talon_derecho">Talón derecho</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="tatuaje_tamano">Tamaño *</label>
+        <select id="tatuaje_tamano" required>
+          <option value="">Seleccionar</option>
+          <option value="PEQUEÑO">Pequeño (&lt;10cm)</option>
+          <option value="MEDIANO">Mediano (10-20cm)</option>
+          <option value="GRANDE">Grande (20-40cm)</option>
+          <option value="MUY_GRANDE">Muy grande (&gt;40cm)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="tatuaje_descripcion">Descripción *</label>
+        <textarea id="tatuaje_descripcion" rows="2" placeholder="Diseño, colores, forma..." required></textarea>
+      </div>
+      <div class="form-group">
+        <label for="tatuaje_significado">Significado</label>
+        <textarea id="tatuaje_significado" rows="2" placeholder="¿Qué significa para usted?"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);">
+        <div class="form-group">
+          <label for="tatuaje_costo">Costo</label>
+          <input type="number" id="tatuaje_costo" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="tatuaje_anio">Año</label>
+          <input type="number" id="tatuaje_anio" placeholder="2024" min="1950" max="2030">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeTatuajeModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary" onclick="saveTatuaje()">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Finalizar Expediente -->
+<div id="finalizarModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:500px;">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock"></i> Finalizar Expediente</h3>
+      <button type="button" class="modal-close" onclick="closeFinalizarModal()">&times;</button>
+    </div>
+    <form action="/consulta/expediente/{{id_eval}}/finalizar" method="POST">
+      <div class="modal-body">
+        <p style="margin-bottom:var(--sp-4);color:var(--gray-600);font-size:var(--text-sm);">
+          Al finalizar el expediente no se podrán realizar más modificaciones. Seleccione el responsable.
+        </p>
+        <div class="form-group">
+          <label>Responsable *</label>
+          <select name="id_responsable" id="finalizar_responsable" required>
+            <option value="">Seleccionar responsable</option>
+            {{#each responsables}}
+            <option value="{{this.id_usuario}}">{{this.nombre}} ({{this.clave}}) - {{this.rol_nombre}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeFinalizarModal()">Cancelar</button>
+        <button type="submit" class="btn btn-warning">
+          <i class="fas fa-lock"></i> Finalizar Expediente
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Ligar a SICOC -->
+<div id="sicocModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:500px;">
+    <div class="modal-header">
+      <h3><i class="fas fa-link"></i> Enlazar a SICOC</h3>
+    </div>
+    <div class="modal-body">
+      <!-- Paso 1: Ingreso de número -->
+      <div id="sicocStep1">
+        <div style="text-align:center;margin-bottom:var(--sp-4);">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--blue-100);display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-3);">
+            <i class="fas fa-exclamation-triangle" style="font-size:24px;color:var(--blue-600);"></i>
+          </div>
+          <p style="color:var(--gray-700);font-size:var(--text-sm);margin-bottom:var(--sp-2);">
+            <strong>Este expediente no está enlazado a SICOC</strong>
+          </p>
+          <p style="color:var(--gray-500);font-size:var(--text-xs);">
+            Ingrese el número de evaluación para verificar y enlazar
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="sicoc_eval_consecutivo">Número de evaluación *</label>
+          <div style="display:flex;gap:var(--sp-2);">
+            <input type="text" id="sicoc_eval_consecutivo" class="form-input" placeholder="Ingrese el número" style="flex:1;" required>
+            <button type="button" class="btn btn-primary" onclick="verificarSicoc()" id="btnVerificarSicoc">
+              <i class="fas fa-search"></i> Verificar
+            </button>
+          </div>
+          <div id="sicocError" style="display:none;color:var(--red-600);font-size:var(--text-xs);margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- Paso 2: Confirmación de datos -->
+      <div id="sicocStep2" style="display:none;">
+        <div style="text-align:center;margin-bottom:var(--sp-4);">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--green-100);display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-3);">
+            <i class="fas fa-check-circle" style="font-size:24px;color:var(--green-600);"></i>
+          </div>
+          <p style="color:var(--gray-700);font-size:var(--text-sm);margin-bottom:var(--sp-2);">
+            <strong>Evaluación encontrada en SICOC</strong>
+          </p>
+          <p style="color:var(--gray-500);font-size:var(--text-xs);">
+            Confirme que los datos corresponden al evaluado
+          </p>
+        </div>
+        <div style="background:var(--surface);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-4);">
+          <div style="display:grid;gap:var(--sp-3);">
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">Nombre</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocNombre">-</div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">No. Empleado</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocNumEmpleado">-</div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">Consecutivo</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocConsecutivo">-</div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">Subprograma</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocSubprograma">-</div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">Adscripción</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocAdscripcion">-</div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:2px;">Cargo</div>
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary);" id="sicocCargo">-</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--sp-2);justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="resetSicocModal()">
+            <i class="fas fa-arrow-left"></i> Cambiar número
+          </button>
+          <button type="button" class="btn btn-success" onclick="confirmarEnlaceSicoc()" id="btnConfirmarSicoc">
+            <i class="fas fa-link"></i> Confirmar Enlace
+          </button>
+        </div>
+      </div>
+
+      <!-- Paso 3: Éxito -->
+      <div id="sicocStep3" style="display:none;">
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--green-100);display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-3);">
+            <i class="fas fa-check" style="font-size:24px;color:var(--green-600);"></i>
+          </div>
+          <p style="color:var(--gray-700);font-size:var(--text-sm);margin-bottom:var(--sp-2);">
+            <strong>¡Enlace exitoso!</strong>
+          </p>
+          <p style="color:var(--gray-500);font-size:var(--text-xs);margin-bottom:var(--sp-4);">
+            El expediente ha sido enlazado a SICOC correctamente
+          </p>
+          <button type="button" class="btn btn-primary" onclick="closeSicocModal()">
+            <i class="fas fa-check"></i> Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

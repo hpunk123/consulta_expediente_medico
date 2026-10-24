@@ -1,0 +1,55 @@
+<div class="search-container" style="max-width:1200px;">
+  <div class="search-card">
+    <h2><i class="fas fa-search"></i> Resultados</h2>
+    <p>Busqueda: "{{nombre}}"</p>
+
+    <form action="/consulta/buscar" method="GET" class="search-form" style="margin-bottom:var(--sp-5);">
+      <input type="text" name="nombre" placeholder="Buscar por nombre, número de empleado o número de evaluación..." value="{{nombre}}" required>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-search"></i> Buscar
+      </button>
+    </form>
+
+    {{#if resultados.length}}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>RFC</th>
+            <th>Empleado</th>
+            <th>Año</th>
+            <th>Tipo</th>
+            <th>No. Evaluación</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each resultados}}
+          <tr>
+            <td><strong>{{this.nombre}}</strong></td>
+            <td><code style="font-size:var(--text-xs);background:var(--gray-100);padding:2px 6px;border-radius:4px;">{{this.empRfc}}</code></td>
+            <td>{{this.empleado}}</td>
+            <td>{{this.anioEval}}</td>
+            <td><span class="badge badge-{{#if (eq this.tipo_eval 'PERMANENCIA')}}primary{{else}}info{{/if}}">{{this.tipo_eval}}</span></td>
+            <td>{{#if this.evalConsecutivo}}<span class="badge badge-success">{{this.evalConsecutivo}}</span>{{else}}<span style="color:var(--gray-400);">Sin enlazar</span>{{/if}}</td>
+            <td><span class="badge badge-{{#if (eq this.estado 'Finalizado')}}success{{else}}warning{{/if}}">{{this.estado}}</span></td>
+            <td>
+              <a href="/consulta/expediente/{{this.id_eval}}" class="btn btn-primary btn-sm">
+                <i class="fas fa-eye"></i> Ver
+              </a>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="no-results">
+      <i class="fas fa-search"></i>
+      <p>No se encontraron evaluados con ese nombre</p>
+    </div>
+    {{/if}}
+  </div>
+</div>
